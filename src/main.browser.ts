@@ -1,3 +1,4 @@
+/*
 import './polyfills.browser';
 
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
@@ -20,3 +21,4 @@ switch (document.readyState) {
   default:
     document.addEventListener('DOMContentLoaded', () => main());
 }
+*/
