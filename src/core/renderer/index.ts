@@ -114,15 +114,16 @@ export class Renderer {
     }
 
     private mapNotes(notes: Note[]): Vex.Flow.StaveNote[] {
-        let lastDivision = 0;
+        let lastDivision = new Fraction(0, 1);
         let vfNotes = [];
 
         // Need to keep track of current beat to break up notes appropriately
         // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
         notes.forEach(note => {
-            const restDivisionLength = note.quantizedOn.division - lastDivision;
+            const restDivisionLength = note.quantizedOn.asFraction().subtract(lastDivision).add(note.beatsPending, 1);
+            console.log('rest length', restDivisionLength);
 
-            if (restDivisionLength > 0) {
+            if (restDivisionLength.greaterThan(0, 1)) {
                 const rests = this.getVfNotesForLength(restDivisionLength, true);
                 vfNotes.push(...rests);
             }
@@ -131,10 +132,10 @@ export class Renderer {
             const notes = this.getVfNotesForLength(noteDivisionLength);
             vfNotes.push(...notes);
 
-            lastDivision = note.quantizedOff.division;
+            lastDivision = note.quantizedOff.asFraction();
         });
 
-        console.log('last division', lastDivision);
+        console.log('vfNotes', vfNotes);
 
         return vfNotes;
     }
