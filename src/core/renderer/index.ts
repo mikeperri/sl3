@@ -2,11 +2,13 @@ const VF = require("vexflow").Flow;
 import { Vex } from "vexflow";
 import { Note } from "../rhythm-input";
 import { Clef, KeySignature, TimeSignature } from "../models";
+import { Fraction } from "../util/fraction";
 
 export class Renderer {
+    private vfFactory;
     private vfContext;
-    private vfStave: Vex.Flow.Stave;
-    private vfVoices: Vex.Flow.Voice[] = [];
+    private vfStave: Vex.Flow.Stave; // todo: remove
+    private vfVoices: Vex.Flow.Voice[] = []; // todo: remove
     private x = 120;
     private y = 80;
     private currentTimeSignature = new TimeSignature(4, 4);
@@ -18,61 +20,36 @@ export class Renderer {
         private elementId: string
     ) {
         // Create an SVG renderer and attach it to the DIV element named "boo".
-        const div = document.getElementById(this.elementId);
-        const renderer = new VF.Renderer(div, VF.Renderer.Backends.SVG);
+        this.vfFactory = new VF.Factory({
+            renderer: {
+                selector: this.elementId,
+                width: 800,
+                height: 600
+            }
+        });
+        this.vfContext = this.vfFactory.getContext();
 
-        // Configure the rendering context.
-        renderer.resize(800, 600);
-        this.vfContext = renderer.getContext();
-
-        // Create a stave of width 400 at position 10, 40 on the canvas.
-        this.vfStave = new VF.Stave(10, 40, 400);
-
-        // Add a clef and time signature.
-        this.vfStave.addClef("treble").addTimeSignature("4/4");
-
-        // Connect it to the rendering context and draw!
-        this.vfStave.setContext(this.vfContext).draw();
-
-        // Create a voice in 4/4 and add above notes
-        const voice = new VF.Voice({num_beats: 4,  beat_value: 4});
-        this.vfVoices.push(voice);
+        // this.drawMeasure(this.x, this.y, [], 'treble');
     }
 
     public render(completed, pending, timeSigChange = null, keySigChange = null) {
-        this.completedNotes.push(...completed);
-
-        console.log("in", completed);
-        const vfNotes = this.mapNotes(completed);
-        console.log("out", vfNotes);
-        const voice = new VF.Voice({num_beats: 4,  beat_value: 4});
-        voice.addTickables(vfNotes);
-
-        const voices = [ voice ];
-
-        // Format and justify the notes to 400 pixels.
-        const formatter = new VF.Formatter().joinVoices(voices).format(voices, 400);
-
-        if (this.currentGroupEl) this.currentGroupEl.remove();
-
-        this.currentGroupEl = this.vfContext.openGroup('g');
-        voice.draw(this.vfContext, this.vfStave);
-        this.vfContext.closeGroup('g');
+        this.drawMeasure(this.x, this.y, completed, null, null, null);
     }
 
     private drawMeasure(
         x: number,
         y: number,
+        notes: Note[] = [],
         clef: Clef,
-        keySigChange = null,
+        keySigChange: KeySignature = null,
         timeSigChange: TimeSignature = null,
-        voices: Vex.Flow.Voice[]
     ) {
         let width = 150;
         if (keySigChange) width += 35;
         if (timeSigChange) width += 35;
 
-        const system = Vex.Flow.System({ x, y, width: width, spaceBetweenStaves: 10 });
+        const system = new VF.System({ x, y, width: width, spaceBetweenStaves: 10, factory: this.vfFactory });
+        system.setContext(this.vfContext);
 
         if (keySigChange) {
             system.addClef(clef);
@@ -83,31 +60,44 @@ export class Renderer {
             system.addTimeSignature(timeSigChange.toVfTimeSpec());
         }
 
-        system.addStave();
+        const voice = new VF.Voice({ num_beats: 4, beat_value: 4 });
+        voice.addTickables(this.mapNotes(notes));
+        voice.mode = VF.Voice.Mode['FULL'];
 
-        system.setContext(this.vfContext);
+        const voices = [ voice ];
+
+        const stave = system.addStave({ voices, debugNoteMetrics: true });
+        stave.draw();
+        system.format();
+        voice.draw();
     }
 
-    private getRests(notes: Note[]) {
+    private getVfRests(notes: Note[]) {
         let totalDivisions = 0;
         notes.forEach(note => {
         });
     }
 
-    private getVfNotesForLength(divisionLength: number, rest = false, keys = ["b/4"]): Vex.Flow.StaveNote[] {
+    private getVfNotesForLength(quarterNoteCount: Vex.Flow.Fraction, rest = false, keys = ["b/4"]): Vex.Flow.StaveNote[] {
         let durations;
 
         // will have to factor
-        if (divisionLength === 1) {
+        if (quarterNoteCount.equals(new Fraction(1, 4))) {
+            durations = ['16'];
+        } else if (quarterNoteCount.equals(new Fraction(1, 2))) {
+            durations = ['8'];
+        } else if (quarterNoteCount.equals(new Fraction(3, 4))) {
+            durations = ['8d'];
+        } else if (quarterNoteCount.equals(new Fraction(1, 1))) {
             durations = ['4'];
-        } else if (divisionLength === 2) {
+        } else if (quarterNoteCount.equals(new Fraction(2, 1))) {
             durations = ['2'];
-        } else if (divisionLength === 3) {
+        } else if (quarterNoteCount.equals(new Fraction(3, 1))) {
             durations = ['2d'];
-        } else if (divisionLength === 4) {
+        } else if (quarterNoteCount.equals(new Fraction(4, 1))) {
             durations = ['1'];
         } else {
-            throw new Error("Not implemented yet: divisionLength = " + divisionLength);
+            throw new Error("Not implemented yet: quarterNoteCount = " + quarterNoteCount);
         }
 
         if (rest) {
@@ -127,7 +117,7 @@ export class Renderer {
         let lastDivision = 0;
         let vfNotes = [];
 
-        // Need to keep track of current beat
+        // Need to keep track of current beat to break up notes appropriately
         // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
         notes.forEach(note => {
             const restDivisionLength = note.quantizedOn.division - lastDivision;
@@ -137,12 +127,14 @@ export class Renderer {
                 vfNotes.push(...rests);
             }
 
-            const noteDivisionLength = note.quantizedOff.division - note.quantizedOn.division;
+            const noteDivisionLength = note.quantizedOff.asFraction().subtract(note.quantizedOn.asFraction());
             const notes = this.getVfNotesForLength(noteDivisionLength);
             vfNotes.push(...notes);
 
             lastDivision = note.quantizedOff.division;
         });
+
+        console.log('last division', lastDivision);
 
         return vfNotes;
     }

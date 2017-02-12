@@ -50,7 +50,7 @@ function init() {
 
     // TEST
     renderer.render(testData.a, []);
-    renderer.render(testData.b, []);
+    // renderer.render(testData.b, []);
 }
 
 init();

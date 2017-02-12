@@ -1,4 +1,4 @@
-import { Fraction } from "vexflow";
+import { Fraction } from "../util/fraction";
 
 export class Tap {
     constructor(
