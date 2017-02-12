@@ -1,4 +1,4 @@
-import { Tap, QuantizeBeatResult, quantizeTime } from './index';
+import { Tap, quantizeTime } from './index';
 import { expect } from "chai";
 
 describe('Quantize beat', () => {

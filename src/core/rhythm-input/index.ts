@@ -87,6 +87,21 @@ export class RhythmInput {
         }
     }
 
+    private fixZeroLengthNote(note: Note) {
+        if (note.beatsPending === 0 && note.quantizedOn.division === note.quantizedOff.division) {
+            const division = note.quantizedOn.division;
+            const divisionCount = note.quantizedOn.divisionCount;
+            const onIsFurther = Math.abs(note.quantizedOn.error) > Math.abs(note.quantizedOff.error);
+            const adjustOn = (onIsFurther && division > 0) || (!onIsFurther && division > divisionCount);
+
+            if (adjustOn) {
+                note.quantizedOn.division--;
+            } else {
+                note.quantizedOff.division++;
+            }
+        }
+    }
+
     private flush(time: number) {
         const beatLength = time - this.beatStartTime;
 
@@ -97,8 +112,6 @@ export class RhythmInput {
             let totalError = 0;
             results.forEach(result => { totalError += result.error });
             totalError = Math.abs(totalError);
-
-            console.log("divisionCount", divisionCount, "totalError", totalError);
 
             return {
                 divisionCount,
@@ -111,6 +124,10 @@ export class RhythmInput {
         let bestResults: Note[] = null;
         let bestTotalError: number;
         resultsByDivisionCount.forEach(({ divisionCount, results, totalError }) => {
+            if (divisionCount % 2 !== 0) {
+                totalError *= 2;
+            }
+
             if (bestResults === null || totalError < bestTotalError) {
                 bestResults = results;
                 bestTotalError = totalError;
@@ -127,6 +144,7 @@ export class RhythmInput {
         });
         this.notePresses = nextNotePresses;
 
+        bestResults.forEach(note => this.fixZeroLengthNote(note));
         const completedNotes = bestResults.filter(result => result.quantizedOff);
         const pendingNotes = bestResults.filter(result => !result.quantizedOff);
 

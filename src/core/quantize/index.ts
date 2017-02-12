@@ -1,3 +1,5 @@
+import { Fraction } from "vexflow";
+
 export class Tap {
     constructor(
         public on: number,
@@ -11,13 +13,10 @@ export class QuantizeTimeResult {
         public divisionCount: number,
         public error: number,
     ) { }
-}
 
-export class QuantizeBeatResult {
-    constructor(
-        public quantizedOn: QuantizeTimeResult,
-        public quantizedOff: QuantizeTimeResult,
-    ) { }
+    public asFraction() {
+        return new Fraction(this.division, this.divisionCount);
+    }
 }
 
 export function quantizeTime(time: number, divisionCount: number, beatLength: number) {
