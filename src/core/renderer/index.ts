@@ -31,7 +31,7 @@ export class Renderer {
 
         const clefsAndVfVoices = measure.voices.map(voice => {
             const vfVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
-            vfVoice.addTickables(this.mapNotes(voice.completed, voice.pending));
+            vfVoice.addTickables(this.mapNotes(voice.clef, voice.completed, voice.pending));
             return { clef: voice.clef, vfVoice };
         });
 
@@ -67,30 +67,33 @@ export class Renderer {
         const quotient = quarterNoteCount.clone().divide(noteLength);
     }
 
-    private getVfNotesForLength(quarterNoteCount: VF.Fraction, rest = false, keys = ["b/4"]): VF.StaveNote[] {
-        const clef = 'treble'; // TODO: factor out!!
+    private getVfNotesForLength(clef: Clef, start: VF.Fraction, end: VF.Fraction, rest = false, keys = null): VF.StaveNote[] {
+        const length = end.clone().subtract(start);
         let durations = [];
+        if (!keys) {
+            keys = clef === "treble" ? ["b/4"] : ["d/3"];
+        }
 
-        // factor
-
-        if (quarterNoteCount.equals(new VF.Fraction(1, 4))) {
+        // Need to break up notes appropriately
+        // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
+        if (length.equals(new VF.Fraction(1, 4))) {
             durations = ['16'];
-        } else if (quarterNoteCount.equals(new VF.Fraction(1, 2))) {
+        } else if (length.equals(new VF.Fraction(1, 2))) {
             durations = ['8'];
-        } else if (quarterNoteCount.equals(new VF.Fraction(3, 4))) {
+        } else if (length.equals(new VF.Fraction(3, 4))) {
             durations = ['8d'];
-        } else if (quarterNoteCount.equals(new VF.Fraction(1, 1))) {
+        } else if (length.equals(new VF.Fraction(1, 1))) {
             durations = ['4'];
-        } else if (quarterNoteCount.equals(new VF.Fraction(2, 1))) {
+        } else if (length.equals(new VF.Fraction(2, 1))) {
             durations = ['2'];
-        } else if (quarterNoteCount.equals(new VF.Fraction(3, 1))) {
+        } else if (length.equals(new VF.Fraction(3, 1))) {
             durations = ['2d'];
-        } else if (quarterNoteCount.equals(new VF.Fraction(4, 1))) {
+        } else if (length.equals(new VF.Fraction(4, 1))) {
             durations = ['1'];
-        } else if (quarterNoteCount.equals(new VF.Fraction(5, 4))) {
+        } else if (length.equals(new VF.Fraction(5, 4))) {
             durations = ['4', '16'];
         } else {
-            throw new Error("Not implemented yet: quarterNoteCount = " + quarterNoteCount);
+            throw new Error("Not implemented yet: quarterNoteCount = " + length);
         }
 
         if (rest) {
@@ -106,33 +109,28 @@ export class Renderer {
         });
     }
 
-    private getVfRests(start: VF.Fraction, end: VF.Fraction) {
+    private getVfRests(clef: Clef, start: VF.Fraction, end: VF.Fraction) {
         const restLength = end.clone().subtract(start);
 
         if (restLength.greaterThan(0, 1)) {
-            return this.getVfNotesForLength(restLength, true);
+            return this.getVfNotesForLength(clef, start, end, true);
         } else {
             return [];
         }
     }
 
-    private mapNotes(completed: Note[], pending: Note[], measureLength = new VF.Fraction(4, 1)): VF.StaveNote[] {
+    private mapNotes(clef: Clef, completed: Note[], pending: Note[], measureLength = new VF.Fraction(4, 1)): VF.StaveNote[] {
         console.log("completed", completed);
         let vfNotes = [];
         let lastBeat = new VF.Fraction(0, 1);
 
-        // Need to keep track of current beat to break up notes appropriately
-        // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
         completed.forEach(note => {
-            vfNotes.push(...this.getVfRests(lastBeat, note.on));
-
-            const noteLength = note.off.clone().subtract(note.on);
-            vfNotes.push(...this.getVfNotesForLength(noteLength));
-
+            vfNotes.push(...this.getVfRests(clef, lastBeat, note.on));
+            vfNotes.push(...this.getVfNotesForLength(clef, note.on, note.off));
             lastBeat = note.off.clone();
         });
 
-        vfNotes.push(...this.getVfRests(lastBeat, measureLength));
+        vfNotes.push(...this.getVfRests(clef, lastBeat, measureLength));
 
         console.log('vfNotes', vfNotes);
 
