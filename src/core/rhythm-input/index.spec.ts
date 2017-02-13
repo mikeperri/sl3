@@ -1,4 +1,5 @@
-import { RhythmInput, Note } from "./index";
+import { RhythmInput } from "./index";
+import { Note } from "../models";
 import { expect } from "chai";
 import { spy } from "sinon";
 import _ from "lodash";

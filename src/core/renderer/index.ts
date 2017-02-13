@@ -1,12 +1,9 @@
 const VF = require("vexflow").Flow;
 import { Vex } from "vexflow";
-import { Note } from "../rhythm-input";
-import { Clef, KeySignature, TimeSignature } from "../models";
+import { Clef, KeySignature, Measure, Note, TimeSignature } from "../models";
 import { Fraction } from "../util/fraction";
 
 export class Renderer {
-    private vfFactory;
-    private vfContext;
     private vfStave: Vex.Flow.Stave; // todo: remove
     private vfVoices: Vex.Flow.Voice[] = []; // todo: remove
     private x = 120;
@@ -16,69 +13,58 @@ export class Renderer {
 
     private completedNotes: Note[] = [];
 
-    constructor(
-        private elementId: string
-    ) {
-        // Create an SVG renderer and attach it to the DIV element named "boo".
-        this.vfFactory = new VF.Factory({
-            renderer: {
-                selector: this.elementId,
-                width: 800,
-                height: 600
-            }
-        });
-        this.vfContext = this.vfFactory.getContext();
-
-        // this.drawMeasure(this.x, this.y, [], 'treble');
-    }
-
-    public render(completed, pending, timeSigChange = null, keySigChange = null) {
-        this.drawMeasure(this.x, this.y, completed, null, null, null);
-    }
-
-    private drawMeasure(
+    public drawMeasure(
+        vfFactory: Vex.Flow.Factory,
         x: number,
         y: number,
-        notes: Note[] = [],
-        clef: Clef,
-        keySigChange: KeySignature = null,
-        timeSigChange: TimeSignature = null,
+        measure: Measure,
     ) {
         let width = 150;
-        if (keySigChange) width += 35;
-        if (timeSigChange) width += 35;
+        if (measure.keySigChange) width += 35;
+        if (measure.timeSigChange) width += 35;
 
-        const system = new VF.System({ x, y, width: width, spaceBetweenStaves: 10, factory: this.vfFactory });
-        system.setContext(this.vfContext);
+        const system = new VF.System({ x, y, width: width, spaceBetweenStaves: 10, factory: vfFactory });
+        system.setContext(vfFactory.getContext());
 
-        if (keySigChange) {
-            system.addClef(clef);
-            system.addKeySignature(keySigChange.toVfKeySpec());
+        if (measure.keySigChange) {
+            system.addKeySignature(measure.keySigChange.toVfKeySpec());
         }
 
-        if (timeSigChange) {
-            system.addTimeSignature(timeSigChange.toVfTimeSpec());
+        if (measure.timeSigChange) {
+            system.addTimeSignature(measure.timeSigChange.toVfTimeSpec());
         }
 
-        const voice = new VF.Voice({ num_beats: 4, beat_value: 4 });
-        voice.addTickables(this.mapNotes(notes));
-        voice.mode = VF.Voice.Mode['FULL'];
-
-        const voices = [ voice ];
-
-        const stave = system.addStave({ voices, debugNoteMetrics: true });
-        stave.draw();
-        system.format();
-        voice.draw();
-    }
-
-    private getVfRests(notes: Note[]) {
-        let totalDivisions = 0;
-        notes.forEach(note => {
+        const clefsAndVfVoices = measure.voices.map(voice => {
+            const vfVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
+            vfVoice.addTickables(this.mapNotes(voice.completed, voice.pending));
+            return { clef: voice.clef, vfVoice };
         });
+
+        const clefToVfVoices = {};
+        clefsAndVfVoices.forEach(({ clef, vfVoice }) => {
+            if (!clefToVfVoices[clef]) {
+                clefToVfVoices[clef] = [];
+            }
+            clefToVfVoices[clef].push(vfVoice);
+        });
+
+        const vfStaves = [];
+        const clefs = Object.keys(clefToVfVoices);
+        clefs.forEach(clef => {
+            const vfVoices = clefToVfVoices[clef];
+            const vfStave = system.addStave({ voices: vfVoices })
+                .addClef(clef);
+
+            vfStaves.push(vfStave);
+        });
+
+        system.format();
+        vfStaves.forEach(vfStave => vfStave.draw());
+        clefs.forEach(clef => clefToVfVoices[clef].forEach(vfVoice => vfVoice.draw()));
     }
 
     private getVfNotesForLength(quarterNoteCount: Vex.Flow.Fraction, rest = false, keys = ["b/4"]): Vex.Flow.StaveNote[] {
+        const clef = 'treble'; // TODO: factor out!!
         let durations;
 
         // will have to factor
@@ -105,35 +91,51 @@ export class Renderer {
         }
 
         return durations.map(duration => {
-            const vfNote = new VF.StaveNote({ clef: "treble", keys, duration });
-            if (duration.endsWith('d')) {
+            const vfNote = new VF.StaveNote({ clef, keys, duration });
+            if (vfNote.dots > 0) {
                 vfNote.addDotToAll();
             }
             return vfNote;
         });
     }
 
-    private mapNotes(notes: Note[]): Vex.Flow.StaveNote[] {
-        let lastDivision = new Fraction(0, 1);
+    private getVfRests(start: Vex.Flow.Fraction, end: Vex.Flow.Fraction) {
+        const restLength = end.subtract(start);
+
+        if (restLength.greaterThan(0, 1)) {
+            return this.getVfNotesForLength(restLength, true);
+        } else {
+            return [];
+        }
+    }
+
+    private mapNotes(completed: Note[], pending: Note[], measureLength: Vex.Flow.Fraction = new Fraction(4, 1)): Vex.Flow.StaveNote[] {
         let vfNotes = [];
+        let lastBeat = new Fraction(0, 1);
 
         // Need to keep track of current beat to break up notes appropriately
         // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
-        notes.forEach(note => {
-            const restDivisionLength = note.quantizedOn.asFraction().subtract(lastDivision).add(note.beatsPending, 1);
-            console.log('rest length', restDivisionLength);
+        completed.forEach(note => {
+            
+            // Idk about this
+            const restLength = note.quantizedOn.asFraction().subtract(lastBeat).subtract(note.beatsPending, 1);
 
-            if (restDivisionLength.greaterThan(0, 1)) {
-                const rests = this.getVfNotesForLength(restDivisionLength, true);
+            if (restLength.greaterThan(0, 1)) {
+                const rests = this.getVfNotesForLength(restLength, true);
                 vfNotes.push(...rests);
             }
+            // end idk about this
+
+            lastBeat = lastBeat.add(restLength);
 
             const noteDivisionLength = note.quantizedOff.asFraction().subtract(note.quantizedOn.asFraction());
             const notes = this.getVfNotesForLength(noteDivisionLength);
             vfNotes.push(...notes);
 
-            lastDivision = note.quantizedOff.asFraction();
+            lastBeat = lastBeat.add(noteDivisionLength);
         });
+
+        vfNotes.push(...this.getVfRests(lastBeat, measureLength));
 
         console.log('vfNotes', vfNotes);
 

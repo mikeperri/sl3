@@ -1,22 +1,10 @@
-import { Fraction } from "../util/fraction";
+import { QuantizeTimeResult } from "../models";
 
 export class Tap {
     constructor(
         public on: number,
         public off: number,
     ) { }
-}
-
-export class QuantizeTimeResult {
-    constructor(
-        public division: number,
-        public divisionCount: number,
-        public error: number,
-    ) { }
-
-    public asFraction() {
-        return new Fraction(this.division, this.divisionCount);
-    }
 }
 
 export function quantizeTime(time: number, divisionCount: number, beatLength: number) {

@@ -1,5 +1,4 @@
-import { Note } from "./core/rhythm-input";
-import { QuantizeTimeResult } from "./core/quantize";
+import { Note, QuantizeTimeResult } from "./core/models";
 
 export const a = [
     new Note(

@@ -1,4 +1,4 @@
-import { Renderer } from "./core/renderer";
+import { Editor } from "./core/editor";
 import { KeyboardRhythmInputHandle } from "./core/keyboard-rhythm-input";
 import { RhythmInput } from "./core/rhythm-input";
 import { TimeSignature, KeySignature } from "./core/models";
@@ -6,7 +6,7 @@ import { TimeSignature, KeySignature } from "./core/models";
 // TESTING
 import * as testData from "./test-song";
 
-var renderer = new Renderer("renderer-host");
+const editor = new Editor("renderer-host");
 const divisionCounts = [4, 3];
 var kriHandle = new KeyboardRhythmInputHandle(
     document,
@@ -42,14 +42,14 @@ function handleNotesReady(completed, pending) {
     console.log("completed:", completed);
     console.log("pending:", pending);
 
-    renderer.render(completed, pending);
+    editor.handleBeatNotes(completed, pending);
 }
 
 function init() {
     // renderer.render([], [], new TimeSignature(4, 4), new KeySignature('D'))
 
     // TEST
-    renderer.render(testData.a, []);
+    editor.handleBeatNotes(testData.a, []);
     // renderer.render(testData.b, []);
 }
 

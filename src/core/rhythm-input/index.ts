@@ -1,4 +1,5 @@
-import { quantizeTime, QuantizeTimeResult } from "../quantize/index";
+import { quantizeTime } from "../quantize/index";
+import { Note, QuantizeTimeResult } from "../models";
 
 class NotePress {
     public offTime: number = null; // Set when the note goes off
@@ -8,14 +9,6 @@ class NotePress {
     constructor(
         public id: number,
         public onTime: number,
-    ) { }
-}
-
-export class Note {
-    constructor(
-        public quantizedOn: QuantizeTimeResult,
-        public quantizedOff: QuantizeTimeResult,
-        public beatsPending: number,
     ) { }
 }
 
