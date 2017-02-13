@@ -1,11 +1,11 @@
 import { Flow as VF } from "vexflow";
 import { Renderer } from "../renderer";
-import { Clef, EditorPosition, KeySignature, Measure, Note, NoteEvent, TimeSignature, Voice } from "../models";
+import { Clef, EditorPosition, KeySignature, Measure, Note, NoteEvent, RendererMeasure, TimeSignature, Voice } from "../models";
 
 export class Editor {
-    private position = new EditorPosition(0, 0, 0);
+    private position = new EditorPosition(0, 1, 0);
     private renderer: Renderer;
-    private measures: Measure[] = [];
+    private measures: RendererMeasure[] = [];
     private vfFactory: VF.Factory;
     private x: number = 120;
     private y: number = 80;
@@ -20,10 +20,17 @@ export class Editor {
             }
         });
 
-        this.measures.push(new Measure(4, 4, [
-            new Voice('treble'),
-            new Voice('bass'),
-        ]));
+        this.measures.push(
+			new RendererMeasure(
+				new Measure(4, 4, [ new Voice('treble'), new Voice('bass') ]),
+				null,
+				this.x,
+				this.y,
+				true
+			)
+		);
+
+
     }
 
     public handleBeatNotes(completedEvents, pendingEvents) {
@@ -38,10 +45,7 @@ export class Editor {
 
         this.renderer.drawMeasure(
             this.vfFactory,
-            this.x,
-            this.y,
-            this.getCurrentMeasure(),
-            shouldAddClef
+            this.getCurrentRendererMeasure()
         );
         const nextPosition = this.getNextPosition();
 
@@ -62,11 +66,21 @@ export class Editor {
     private addMeasure() {
         const measure = this.getCurrentMeasure();
         const newVoices = measure.voices.map(voice => new Voice(voice.clef));
-        this.measures.push(new Measure(measure.beatCount, measure.beatValue, newVoices));
+        this.measures.push(new RendererMeasure(
+			new Measure(measure.beatCount, measure.beatValue, newVoices),
+			null,
+			this.x + 120, // width;
+			this.y + 0,
+			false
+		));
+    }
+
+    private getCurrentRendererMeasure() {
+        return this.measures[this.position.measureIndex];
     }
 
     private getCurrentMeasure() {
-        return this.measures[this.position.measureIndex];
+        return this.getCurrentRendererMeasure().measure;
     }
 
     private getCurrentVoice() {

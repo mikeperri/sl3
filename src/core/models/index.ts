@@ -5,5 +5,6 @@ export * from "./measure";
 export * from "./note";
 export * from "./note-event";
 export * from "./quantize-result";
+export * from "./renderer-measure";
 export * from "./time-signature";
 export * from "./voice";

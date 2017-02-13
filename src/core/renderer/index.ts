@@ -1,16 +1,20 @@
 import { Flow as VF } from "vexflow";
-import { Clef, KeySignature, Measure, Note, TimeSignature } from "../models";
+import { Clef, KeySignature, Measure, Note, RendererMeasure, TimeSignature } from "../models";
 
 export class Renderer {
     public drawMeasure(
         vfFactory: VF.Factory,
-        x: number,
-        y: number,
-        measure: Measure,
-        shouldAddClef = false,
+        rendererMeasure: RendererMeasure,
     ) {
-        let width = 150;
-        if (shouldAddClef) width += 20;
+		const { measure, x, y, startsLine } = rendererMeasure;
+
+		if (rendererMeasure.element) {
+			console.log("need to erase", rendererMeasure.element);
+			rendererMeasure.element.remove();
+		}
+
+        let width = 200;
+        if (startsLine) width += 20;
         if (measure.keySigChange) width += 20;
         if (measure.timeSigChange) width += 20;
 
@@ -44,14 +48,18 @@ export class Renderer {
         clefs.forEach(clef => {
             const vfVoices = clefToVfVoices[clef];
             const vfStave = system.addStave({ voices: vfVoices })
-                .addClef(clef);
+			if (startsLine) vfStave.addClef(clef);
 
             vfStaves.push(vfStave);
         });
 
+		const element = system.getContext().openGroup('measure');
         system.format();
         vfStaves.forEach(vfStave => vfStave.draw());
         clefs.forEach(clef => clefToVfVoices[clef].forEach(vfVoice => vfVoice.draw()));
+		system.getContext().closeGroup('measure');
+
+		rendererMeasure.element = element;
     }
 
     private getVfNotesForLength(quarterNoteCount: VF.Fraction, rest = false, keys = ["b/4"]): VF.StaveNote[] {
@@ -110,7 +118,7 @@ export class Renderer {
         // Need to keep track of current beat to break up notes appropriately
         // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
         completed.forEach(note => {
-            
+
             // Idk about this
             const restLength = note.on.clone().subtract(lastBeat);
 
