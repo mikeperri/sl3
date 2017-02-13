@@ -51,6 +51,10 @@ function init() {
     // TEST
     editor.handleBeatNotes(testData.a, []);
     editor.handleBeatNotes(testData.b, []);
+    editor.handleBeatNotes(testData.b, []);
+    editor.handleBeatNotes(testData.b, []);
+    editor.handleBeatNotes(testData.b, []);
+    editor.handleBeatNotes(testData.b, []);
 }
 
 init();

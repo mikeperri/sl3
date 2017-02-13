@@ -64,12 +64,13 @@ export class Editor {
 	}
 
     private addMeasure() {
+		const rendererMeasure = this.getCurrentRendererMeasure();
         const measure = this.getCurrentMeasure();
         const newVoices = measure.voices.map(voice => new Voice(voice.clef));
         this.measures.push(new RendererMeasure(
 			new Measure(measure.beatCount, measure.beatValue, newVoices),
 			null,
-			this.x + 120, // width;
+			this.x + rendererMeasure.width, // width;
 			this.y + 0,
 			false
 		));

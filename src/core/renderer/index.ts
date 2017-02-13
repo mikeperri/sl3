@@ -60,6 +60,7 @@ export class Renderer {
 		system.getContext().closeGroup('measure');
 
 		rendererMeasure.element = element;
+		rendererMeasure.width = width;
     }
 
     private getVfNotesForLength(quarterNoteCount: VF.Fraction, rest = false, keys = ["b/4"]): VF.StaveNote[] {
