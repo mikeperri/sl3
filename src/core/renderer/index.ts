@@ -6,12 +6,12 @@ export class Renderer {
         vfFactory: VF.Factory,
         rendererMeasure: RendererMeasure,
     ) {
-		const { measure, x, y, startsLine } = rendererMeasure;
+        const { measure, x, y, startsLine } = rendererMeasure;
 
-		if (rendererMeasure.element) {
-			console.log("need to erase", rendererMeasure.element);
-			rendererMeasure.element.remove();
-		}
+        if (rendererMeasure.element) {
+            console.log("need to erase", rendererMeasure.element);
+            rendererMeasure.element.remove();
+        }
 
         let width = 200;
         if (startsLine) width += 20;
@@ -48,26 +48,31 @@ export class Renderer {
         clefs.forEach(clef => {
             const vfVoices = clefToVfVoices[clef];
             const vfStave = system.addStave({ voices: vfVoices })
-			if (startsLine) vfStave.addClef(clef);
+            if (startsLine) vfStave.addClef(clef);
 
             vfStaves.push(vfStave);
         });
 
-		const element = system.getContext().openGroup('measure');
+        const element = system.getContext().openGroup('measure');
         system.format();
         vfStaves.forEach(vfStave => vfStave.draw());
         clefs.forEach(clef => clefToVfVoices[clef].forEach(vfVoice => vfVoice.draw()));
-		system.getContext().closeGroup('measure');
+        system.getContext().closeGroup('measure');
 
-		rendererMeasure.element = element;
-		rendererMeasure.width = width;
+        rendererMeasure.element = element;
+        rendererMeasure.width = width;
+    }
+
+    private getFractionAndRemainder(quarterNoteCount, noteLength) {
+        const quotient = quarterNoteCount.clone().divide(noteLength);
     }
 
     private getVfNotesForLength(quarterNoteCount: VF.Fraction, rest = false, keys = ["b/4"]): VF.StaveNote[] {
         const clef = 'treble'; // TODO: factor out!!
-        let durations;
+        let durations = [];
 
-        // will have to factor
+        // factor
+
         if (quarterNoteCount.equals(new VF.Fraction(1, 4))) {
             durations = ['16'];
         } else if (quarterNoteCount.equals(new VF.Fraction(1, 2))) {
@@ -82,8 +87,8 @@ export class Renderer {
             durations = ['2d'];
         } else if (quarterNoteCount.equals(new VF.Fraction(4, 1))) {
             durations = ['1'];
-		} else if (quarterNoteCount.equals(new VF.Fraction(5, 4))) {
-			durations = ['4', '16'];
+        } else if (quarterNoteCount.equals(new VF.Fraction(5, 4))) {
+            durations = ['4', '16'];
         } else {
             throw new Error("Not implemented yet: quarterNoteCount = " + quarterNoteCount);
         }
@@ -102,7 +107,7 @@ export class Renderer {
     }
 
     private getVfRests(start: VF.Fraction, end: VF.Fraction) {
-        const restLength = end.subtract(start);
+        const restLength = end.clone().subtract(start);
 
         if (restLength.greaterThan(0, 1)) {
             return this.getVfNotesForLength(restLength, true);
@@ -119,15 +124,7 @@ export class Renderer {
         // Need to keep track of current beat to break up notes appropriately
         // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
         completed.forEach(note => {
-
-            // Idk about this
-            const restLength = note.on.clone().subtract(lastBeat);
-
-            if (restLength.greaterThan(0, 1)) {
-                const rests = this.getVfNotesForLength(restLength, true);
-                vfNotes.push(...rests);
-            }
-            // end idk about this
+            vfNotes.push(...this.getVfRests(lastBeat, note.on));
 
             const noteLength = note.off.clone().subtract(note.on);
             vfNotes.push(...this.getVfNotesForLength(noteLength));
