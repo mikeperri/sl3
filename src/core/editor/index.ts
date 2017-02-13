@@ -1,13 +1,12 @@
-const VF = require("vexflow").Flow;
-import { Vex } from "vexflow";
+import { Flow as VF } from "vexflow";
 import { Renderer } from "../renderer";
-import { Clef, EditorPosition, KeySignature, Measure, Note, TimeSignature, Voice } from "../models";
+import { Clef, EditorPosition, KeySignature, Measure, NoteEvent, TimeSignature, Voice } from "../models";
 
 export class Editor {
     private position = new EditorPosition(0, 0, 0);
     private renderer: Renderer;
     private measures: Measure[] = [];
-    private vfFactory: Vex.Flow.Factory;
+    private vfFactory: VF.Factory;
     private x: number = 120;
     private y: number = 80;
 
@@ -31,11 +30,15 @@ export class Editor {
         this.getCurrentVoice().completed.push(...completed);
         this.getCurrentVoice().pending = pending;
 
+        // Will depend on how many measures per row
+        const shouldAddClef = this.position.measureIndex === 0 && this.position.beatIndex === 0;
+
         this.renderer.drawMeasure(
             this.vfFactory,
             this.x,
             this.y,
-            this.getCurrentMeasure()
+            this.getCurrentMeasure(),
+            shouldAddClef
         );
         const nextPosition = this.getNextPosition();
 

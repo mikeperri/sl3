@@ -1,4 +1,4 @@
-import { Fraction } from "../util/fraction";
+import { Flow as VF } from "vexflow";
 
 export class QuantizeTimeResult {
     constructor(
@@ -8,6 +8,6 @@ export class QuantizeTimeResult {
     ) { }
 
     public asFraction() {
-        return new Fraction(this.division, this.divisionCount);
+        return new VF.Fraction(this.division, this.divisionCount);
     }
 }

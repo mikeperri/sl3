@@ -1,5 +1,5 @@
 import { quantizeTime } from "../quantize/index";
-import { Note, QuantizeTimeResult } from "../models";
+import { NoteEvent, QuantizeTimeResult } from "../models";
 
 class NotePress {
     public offTime: number = null; // Set when the note goes off
@@ -18,7 +18,7 @@ export class RhythmInput {
 
     constructor(
         public divisionCounts: number[],
-        public handleNotesReady: (completedNotes: Note[], pendingNotes: Note[]) => void,
+        public handleNotesReady: (completedNotes: NoteEvent[], pendingNotes: NoteEvent[]) => void,
     ) { }
 
     public handleBeat(time: number) {
@@ -46,7 +46,7 @@ export class RhythmInput {
         } // may want to add else case to handle notes before recording started
     }
 
-    private quantizeNewTimes(notePress: NotePress, divisionCount: number, beatLength: number): { error: number, note: Note } {
+    private quantizeNewTimes(notePress: NotePress, divisionCount: number, beatLength: number): { error: number, note: NoteEvent } {
         let error = 0;
         let quantizedOn = notePress.quantizedOn;
         let quantizedOff;
@@ -62,7 +62,7 @@ export class RhythmInput {
 
             return {
                 error,
-                note: new Note(
+                note: new NoteEvent(
                     quantizedOn,
                     quantizedOff,
                     notePress.beatsPending,
@@ -71,7 +71,7 @@ export class RhythmInput {
         } else {
             return {
                 error,
-                note: new Note(
+                note: new NoteEvent(
                     quantizedOn,
                     null,
                     notePress.beatsPending,
@@ -80,7 +80,7 @@ export class RhythmInput {
         }
     }
 
-    private fixZeroLengthNote(note: Note) {
+    private fixZeroLengthNote(note: NoteEvent) {
         if (note.beatsPending === 0 && note.quantizedOn.division === note.quantizedOff.division) {
             const division = note.quantizedOn.division;
             const divisionCount = note.quantizedOn.divisionCount;
@@ -114,7 +114,7 @@ export class RhythmInput {
         });
 
         // Find division count with minimum error
-        let bestResults: Note[] = null;
+        let bestResults: NoteEvent[] = null;
         let bestTotalError: number;
         resultsByDivisionCount.forEach(({ divisionCount, results, totalError }) => {
             if (divisionCount % 2 !== 0) {

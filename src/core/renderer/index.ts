@@ -1,27 +1,27 @@
-const VF = require("vexflow").Flow;
-import { Vex } from "vexflow";
-import { Clef, KeySignature, Measure, Note, TimeSignature } from "../models";
-import { Fraction } from "../util/fraction";
+import { Flow as VF } from "vexflow";
+import { Clef, KeySignature, Measure, NoteEvent, TimeSignature } from "../models";
 
 export class Renderer {
-    private vfStave: Vex.Flow.Stave; // todo: remove
-    private vfVoices: Vex.Flow.Voice[] = []; // todo: remove
+    private vfStave: VF.Stave; // todo: remove
+    private vfVoices: VF.Voice[] = []; // todo: remove
     private x = 120;
     private y = 80;
     private currentTimeSignature = new TimeSignature(4, 4);
     private currentGroupEl;
 
-    private completedNotes: Note[] = [];
+    private completedNotes: NoteEvent[] = [];
 
     public drawMeasure(
-        vfFactory: Vex.Flow.Factory,
+        vfFactory: VF.Factory,
         x: number,
         y: number,
         measure: Measure,
+        shouldAddClef = false,
     ) {
         let width = 150;
-        if (measure.keySigChange) width += 35;
-        if (measure.timeSigChange) width += 35;
+        if (shouldAddClef) width += 20;
+        if (measure.keySigChange) width += 20;
+        if (measure.timeSigChange) width += 20;
 
         const system = new VF.System({ x, y, width: width, spaceBetweenStaves: 10, factory: vfFactory });
         system.setContext(vfFactory.getContext());
@@ -63,24 +63,24 @@ export class Renderer {
         clefs.forEach(clef => clefToVfVoices[clef].forEach(vfVoice => vfVoice.draw()));
     }
 
-    private getVfNotesForLength(quarterNoteCount: Vex.Flow.Fraction, rest = false, keys = ["b/4"]): Vex.Flow.StaveNote[] {
+    private getVfNotesForLength(quarterNoteCount: VF.Fraction, rest = false, keys = ["b/4"]): VF.StaveNote[] {
         const clef = 'treble'; // TODO: factor out!!
         let durations;
 
         // will have to factor
-        if (quarterNoteCount.equals(new Fraction(1, 4))) {
+        if (quarterNoteCount.equals(new VF.Fraction(1, 4))) {
             durations = ['16'];
-        } else if (quarterNoteCount.equals(new Fraction(1, 2))) {
+        } else if (quarterNoteCount.equals(new VF.Fraction(1, 2))) {
             durations = ['8'];
-        } else if (quarterNoteCount.equals(new Fraction(3, 4))) {
+        } else if (quarterNoteCount.equals(new VF.Fraction(3, 4))) {
             durations = ['8d'];
-        } else if (quarterNoteCount.equals(new Fraction(1, 1))) {
+        } else if (quarterNoteCount.equals(new VF.Fraction(1, 1))) {
             durations = ['4'];
-        } else if (quarterNoteCount.equals(new Fraction(2, 1))) {
+        } else if (quarterNoteCount.equals(new VF.Fraction(2, 1))) {
             durations = ['2'];
-        } else if (quarterNoteCount.equals(new Fraction(3, 1))) {
+        } else if (quarterNoteCount.equals(new VF.Fraction(3, 1))) {
             durations = ['2d'];
-        } else if (quarterNoteCount.equals(new Fraction(4, 1))) {
+        } else if (quarterNoteCount.equals(new VF.Fraction(4, 1))) {
             durations = ['1'];
         } else {
             throw new Error("Not implemented yet: quarterNoteCount = " + quarterNoteCount);
@@ -99,7 +99,7 @@ export class Renderer {
         });
     }
 
-    private getVfRests(start: Vex.Flow.Fraction, end: Vex.Flow.Fraction) {
+    private getVfRests(start: VF.Fraction, end: VF.Fraction) {
         const restLength = end.subtract(start);
 
         if (restLength.greaterThan(0, 1)) {
@@ -109,9 +109,10 @@ export class Renderer {
         }
     }
 
-    private mapNotes(completed: Note[], pending: Note[], measureLength: Vex.Flow.Fraction = new Fraction(4, 1)): Vex.Flow.StaveNote[] {
+    private mapNotes(completed: NoteEvent[], pending: NoteEvent[], measureLength = new VF.Fraction(4, 1)): VF.StaveNote[] {
+        console.log("completed", completed);
         let vfNotes = [];
-        let lastBeat = new Fraction(0, 1);
+        let lastBeat = new VF.Fraction(0, 1);
 
         // Need to keep track of current beat to break up notes appropriately
         // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
