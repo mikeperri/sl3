@@ -1,16 +1,7 @@
 import { Flow as VF } from "vexflow";
-import { Clef, KeySignature, Measure, NoteEvent, TimeSignature } from "../models";
+import { Clef, KeySignature, Measure, Note, TimeSignature } from "../models";
 
 export class Renderer {
-    private vfStave: VF.Stave; // todo: remove
-    private vfVoices: VF.Voice[] = []; // todo: remove
-    private x = 120;
-    private y = 80;
-    private currentTimeSignature = new TimeSignature(4, 4);
-    private currentGroupEl;
-
-    private completedNotes: NoteEvent[] = [];
-
     public drawMeasure(
         vfFactory: VF.Factory,
         x: number,
@@ -82,6 +73,8 @@ export class Renderer {
             durations = ['2d'];
         } else if (quarterNoteCount.equals(new VF.Fraction(4, 1))) {
             durations = ['1'];
+		} else if (quarterNoteCount.equals(new VF.Fraction(5, 4))) {
+			durations = ['4', '16'];
         } else {
             throw new Error("Not implemented yet: quarterNoteCount = " + quarterNoteCount);
         }
@@ -109,7 +102,7 @@ export class Renderer {
         }
     }
 
-    private mapNotes(completed: NoteEvent[], pending: NoteEvent[], measureLength = new VF.Fraction(4, 1)): VF.StaveNote[] {
+    private mapNotes(completed: Note[], pending: Note[], measureLength = new VF.Fraction(4, 1)): VF.StaveNote[] {
         console.log("completed", completed);
         let vfNotes = [];
         let lastBeat = new VF.Fraction(0, 1);
@@ -119,7 +112,7 @@ export class Renderer {
         completed.forEach(note => {
             
             // Idk about this
-            const restLength = note.quantizedOn.asFraction().subtract(lastBeat).subtract(note.beatsPending, 1);
+            const restLength = note.on.clone().subtract(lastBeat);
 
             if (restLength.greaterThan(0, 1)) {
                 const rests = this.getVfNotesForLength(restLength, true);
@@ -127,13 +120,10 @@ export class Renderer {
             }
             // end idk about this
 
-            lastBeat = lastBeat.add(restLength);
+            const noteLength = note.off.clone().subtract(note.on);
+            vfNotes.push(...this.getVfNotesForLength(noteLength));
 
-            const noteDivisionLength = note.quantizedOff.asFraction().subtract(note.quantizedOn.asFraction());
-            const notes = this.getVfNotesForLength(noteDivisionLength);
-            vfNotes.push(...notes);
-
-            lastBeat = lastBeat.add(noteDivisionLength);
+            lastBeat = note.off.clone();
         });
 
         vfNotes.push(...this.getVfRests(lastBeat, measureLength));

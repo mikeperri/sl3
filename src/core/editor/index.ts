@@ -1,6 +1,6 @@
 import { Flow as VF } from "vexflow";
 import { Renderer } from "../renderer";
-import { Clef, EditorPosition, KeySignature, Measure, NoteEvent, TimeSignature, Voice } from "../models";
+import { Clef, EditorPosition, KeySignature, Measure, Note, NoteEvent, TimeSignature, Voice } from "../models";
 
 export class Editor {
     private position = new EditorPosition(0, 0, 0);
@@ -26,9 +26,12 @@ export class Editor {
         ]));
     }
 
-    public handleBeatNotes(completed, pending) {
-        this.getCurrentVoice().completed.push(...completed);
-        this.getCurrentVoice().pending = pending;
+    public handleBeatNotes(completedEvents, pendingEvents) {
+		const completedNotes = completedEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
+		const pendingNotes = pendingEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
+
+        this.getCurrentVoice().completed.push(...completedNotes);
+        this.getCurrentVoice().pending = pendingNotes;
 
         // Will depend on how many measures per row
         const shouldAddClef = this.position.measureIndex === 0 && this.position.beatIndex === 0;
@@ -48,6 +51,13 @@ export class Editor {
 
         this.position = nextPosition;
     }
+
+	private noteEventToNote(noteEvent: NoteEvent, beatIndex) {
+		return new Note(
+			noteEvent.quantizedOn.asFraction().add(beatIndex, 1),
+			noteEvent.quantizedOff.asFraction().add(beatIndex, 1),
+		);
+	}
 
     private addMeasure() {
         const measure = this.getCurrentMeasure();
