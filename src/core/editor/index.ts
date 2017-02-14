@@ -21,21 +21,21 @@ export class Editor {
         });
 
         this.measures.push(
-			new RendererMeasure(
-				new Measure(4, 4, [ new Voice('treble'), new Voice('bass') ]),
-				null,
-				this.x,
-				this.y,
-				true
-			)
-		);
+            new RendererMeasure(
+                new Measure(4, 4, [ new Voice('treble'), new Voice('bass') ]),
+                null,
+                this.x,
+                this.y,
+                true
+            )
+        );
 
 
     }
 
     public handleBeatNotes(completedEvents, pendingEvents) {
-		const completedNotes = completedEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
-		const pendingNotes = pendingEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
+        const completedNotes = completedEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
+        const pendingNotes = pendingEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
 
         this.getCurrentVoice().completed.push(...completedNotes);
         this.getCurrentVoice().pending = pendingNotes;
@@ -56,24 +56,27 @@ export class Editor {
         this.position = nextPosition;
     }
 
-	private noteEventToNote(noteEvent: NoteEvent, beatIndex) {
-		return new Note(
-			noteEvent.quantizedOn.asFraction().add(beatIndex, 1),
-			noteEvent.quantizedOff.asFraction().add(beatIndex, 1),
-		);
-	}
+    // Shouldn't this be handled by rhythm input?
+    private noteEventToNote(noteEvent: NoteEvent, beatIndex) {
+        const n = new Note(
+            noteEvent.quantizedOn.asFraction().add(beatIndex - noteEvent.beatsPending, 1),
+            noteEvent.quantizedOff.asFraction().add(beatIndex, 1),
+        );
+        console.log("NOTE", n);
+        return n;
+    }
 
     private addMeasure() {
-		const rendererMeasure = this.getCurrentRendererMeasure();
+        const rendererMeasure = this.getCurrentRendererMeasure();
         const measure = this.getCurrentMeasure();
         const newVoices = measure.voices.map(voice => new Voice(voice.clef));
         this.measures.push(new RendererMeasure(
-			new Measure(measure.beatCount, measure.beatValue, newVoices),
-			null,
-			this.x + rendererMeasure.width, // width;
-			this.y + 0,
-			false
-		));
+            new Measure(measure.beatCount, measure.beatValue, newVoices),
+            null,
+            this.x + rendererMeasure.width, // width;
+            this.y + 0,
+            false
+        ));
     }
 
     private getCurrentRendererMeasure() {

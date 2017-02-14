@@ -116,6 +116,12 @@ export class Renderer {
             durations = ['1'];
         } else if (length.equals(new VF.Fraction(5, 4))) {
             durations = ['4', '16'];
+        } else if (length.equals(new VF.Fraction(3, 2))) {
+            durations = ['4d'];
+        } else if (length.equals(new VF.Fraction(5, 2))) {
+            durations = ['4', '4', '8'];
+        } else if (length.equals(new VF.Fraction(7, 2))) {
+            durations = ['4', '4', '4', '8'];
         } else {
             throw new Error("Not implemented yet: quarterNoteCount = " + length);
         }
