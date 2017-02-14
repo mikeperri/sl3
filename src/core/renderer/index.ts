@@ -29,9 +29,12 @@ export class Renderer {
             system.addTimeSignature(measure.timeSigChange.toVfTimeSpec());
         }
 
+        const allVfTies = [];
         const clefsAndVfVoices = measure.voices.map(voice => {
             const vfVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
-            vfVoice.addTickables(this.mapNotes(voice.clef, voice.completed, voice.pending));
+            const { vfNotes, vfTies } = this.mapNotes(voice.clef, voice.completed, voice.pending)
+            vfVoice.addTickables(vfNotes);
+            allVfTies.push(...vfTies);
             return { clef: voice.clef, vfVoice };
         });
 
@@ -57,6 +60,7 @@ export class Renderer {
         system.format();
         vfStaves.forEach(vfStave => vfStave.draw());
         clefs.forEach(clef => clefToVfVoices[clef].forEach(vfVoice => vfVoice.draw()));
+        allVfTies.forEach(vfTie => vfTie.setContext(system.getContext()).draw());
         system.getContext().closeGroup('measure');
 
         rendererMeasure.element = element;
@@ -128,7 +132,7 @@ export class Renderer {
         }
     }
 
-    private getVfNotesForLength(clef: Clef, start: VF.Fraction, end: VF.Fraction, rest = false, keys = null): VF.StaveNote[] {
+    private getVfNotesForLength(clef: Clef, start: VF.Fraction, end: VF.Fraction, rest = false, keys = null): { vfNotes: VF.StaveNote[], vfTies: VF.StaveTie[] } {
         const length = end.clone().subtract(start);
         if (!keys) {
             keys = clef === "treble" ? ["b/4"] : ["d/3"];
@@ -153,40 +157,58 @@ export class Renderer {
             durations = durations.map(d => d + "r");
         }
 
-        return durations.map(duration => {
+        const vfNotes = durations.map(duration => {
             const vfNote = new VF.StaveNote({ clef, keys, duration });
             if (vfNote.dots > 0) {
                 vfNote.addDotToAll();
             }
             return vfNote;
         });
+
+        const vfTies: VF.StaveTie[] = [];
+        if (vfNotes.length > 1 && !rest) {
+            // Add ties
+            for (var i = 1; i < vfNotes.length; i++) {
+                vfTies.push(new VF.StaveTie({
+                    first_note: vfNotes[i - 1],
+                    last_note: vfNotes[i],
+                    first_indices: [ 0 ],
+                    last_indices: [ 0 ],
+                }));
+            }
+        }
+
+        return { vfNotes, vfTies };
     }
 
     private getVfRests(clef: Clef, start: VF.Fraction, end: VF.Fraction) {
         const restLength = end.clone().subtract(start);
 
         if (restLength.greaterThan(0, 1)) {
-            return this.getVfNotesForLength(clef, start, end, true);
+            return this.getVfNotesForLength(clef, start, end, true).vfNotes;
         } else {
             return [];
         }
     }
 
-    private mapNotes(clef: Clef, completed: Note[], pending: Note[], measureLength = new VF.Fraction(4, 1)): VF.StaveNote[] {
+    private mapNotes(clef: Clef, completed: Note[], pending: Note[], measureLength = new VF.Fraction(4, 1)): { vfNotes: VF.StaveNote[], vfTies: VF.StaveTie[] } {
         console.log("completed", completed);
-        let vfNotes = [];
+        let allVfNotes = [];
+        let allVfTies = [];
         let lastBeat = new VF.Fraction(0, 1);
 
         completed.forEach(note => {
-            vfNotes.push(...this.getVfRests(clef, lastBeat, note.on));
-            vfNotes.push(...this.getVfNotesForLength(clef, note.on, note.off));
+            allVfNotes.push(...this.getVfRests(clef, lastBeat, note.on));
+            const { vfNotes, vfTies } = this.getVfNotesForLength(clef, note.on, note.off);
+            allVfNotes.push(...vfNotes);
+            allVfTies.push(...vfTies);
             lastBeat = note.off.clone();
         });
 
-        vfNotes.push(...this.getVfRests(clef, lastBeat, measureLength));
+        allVfNotes.push(...this.getVfRests(clef, lastBeat, measureLength));
 
-        console.log('vfNotes', vfNotes);
+        console.log('vfNotes', allVfNotes);
 
-        return vfNotes;
+        return { vfNotes: allVfNotes, vfTies: allVfTies };
     }
 }
