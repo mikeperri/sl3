@@ -63,8 +63,22 @@ export class Renderer {
         rendererMeasure.width = width;
     }
 
-    private getFractionAndRemainder(quarterNoteCount, noteLength) {
-        const quotient = quarterNoteCount.clone().divide(noteLength);
+    private getDivisionPoints(start: VF.Fraction, end: VF.Fraction) {
+        let points: VF.Fraction[] = [];
+        if (start.denominator >= 4 && start.denominator > end.denominator) {
+            const point = new VF.Fraction(Math.ceil(start.numerator / 4), start.denominator / 4)
+            while(point.lessThan(end)) {
+                points.push(point.clone());
+                point.add(1, point.denominator);
+            }
+        } else if (end.denominator >= 4) {
+            const point = new VF.Fraction(Math.floor(end.numerator / 4), end.denominator / 4);
+            while(point.greaterThan(start)) {
+                points.push(point.clone());
+                point.subtract(1, point.denominator);
+            }
+        }
+        return points;
     }
 
     private getVfNotesForLength(clef: Clef, start: VF.Fraction, end: VF.Fraction, rest = false, keys = null): VF.StaveNote[] {
@@ -76,6 +90,16 @@ export class Renderer {
 
         // Need to break up notes appropriately
         // http://music.indiana.edu/departments/academic/composition/style-guide/index.shtml#rhythm
+        start.simplify();
+        end.simplify();
+        console.log("start", start, "end", end);
+
+        // Find boundaries for division
+        const divisionPoints = this.getDivisionPoints(start, end);
+        if (divisionPoints) {
+            console.log("division point", divisionPoints);
+        }
+
         if (length.equals(new VF.Fraction(1, 4))) {
             durations = ['16'];
         } else if (length.equals(new VF.Fraction(1, 2))) {
