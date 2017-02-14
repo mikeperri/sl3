@@ -77,13 +77,59 @@ export class Renderer {
                 points.push(point.clone());
                 point.subtract(1, point.denominator);
             }
+            points.reverse();
         }
         return points;
     }
 
+    private splitAtDivisionPoints(start: VF.Fraction, end: VF.Fraction, divisionPoints: VF.Fraction[]): string[] {
+        let pointsInRange: VF.Fraction[] = [ start ];
+        divisionPoints.forEach(divisionPoint => {
+            if (divisionPoint.greaterThan(start) && divisionPoint.lessThan(end)) {
+                pointsInRange.push(divisionPoint);
+            }
+        });
+        pointsInRange.push(end);
+
+        let durations = [];
+        for (var i = 1; i < pointsInRange.length; i++) {
+            const length = pointsInRange[i].clone().subtract(pointsInRange[i - 1]);
+            durations.push(...this.lengthToVfDurations(length));
+        }
+        return durations;
+    }
+
+
+    private lengthToVfDurations(length: VF.Fraction): string[] {
+        if (length.equals(new VF.Fraction(1, 4))) {
+            return ['16'];
+        } else if (length.equals(new VF.Fraction(1, 2))) {
+            return ['8'];
+        } else if (length.equals(new VF.Fraction(3, 4))) {
+            return ['8d'];
+        } else if (length.equals(new VF.Fraction(1, 1))) {
+            return ['4'];
+        } else if (length.equals(new VF.Fraction(2, 1))) {
+            return ['2'];
+        } else if (length.equals(new VF.Fraction(3, 1))) {
+            return ['2d'];
+        } else if (length.equals(new VF.Fraction(4, 1))) {
+            return ['1'];
+        } else if (length.equals(new VF.Fraction(5, 4))) {
+            return ['4', '16'];
+        } else if (length.equals(new VF.Fraction(3, 2))) {
+            return ['4d'];
+        } else if (length.equals(new VF.Fraction(5, 2))) {
+            return ['4', '4', '8'];
+        } else if (length.equals(new VF.Fraction(7, 2))) {
+            return ['4', '4', '4', '8'];
+        } else {
+            throw new Error("Not implemented yet: quarterNoteCount = " + length);
+        }
+    }
+
     private getVfNotesForLength(clef: Clef, start: VF.Fraction, end: VF.Fraction, rest = false, keys = null): VF.StaveNote[] {
         const length = end.clone().subtract(start);
-        let durations = [];
         if (!keys) {
             keys = clef === "treble" ? ["b/4"] : ["d/3"];
         }
@@ -97,34 +143,11 @@ export class Renderer {
         // Find boundaries for division
         const divisionPoints = this.getDivisionPoints(start, end);
         if (divisionPoints) {
-            console.log("division point", divisionPoints);
+            console.log("division point", ...divisionPoints);
         }
 
-        if (length.equals(new VF.Fraction(1, 4))) {
-            durations = ['16'];
-        } else if (length.equals(new VF.Fraction(1, 2))) {
-            durations = ['8'];
-        } else if (length.equals(new VF.Fraction(3, 4))) {
-            durations = ['8d'];
-        } else if (length.equals(new VF.Fraction(1, 1))) {
-            durations = ['4'];
-        } else if (length.equals(new VF.Fraction(2, 1))) {
-            durations = ['2'];
-        } else if (length.equals(new VF.Fraction(3, 1))) {
-            durations = ['2d'];
-        } else if (length.equals(new VF.Fraction(4, 1))) {
-            durations = ['1'];
-        } else if (length.equals(new VF.Fraction(5, 4))) {
-            durations = ['4', '16'];
-        } else if (length.equals(new VF.Fraction(3, 2))) {
-            durations = ['4d'];
-        } else if (length.equals(new VF.Fraction(5, 2))) {
-            durations = ['4', '4', '8'];
-        } else if (length.equals(new VF.Fraction(7, 2))) {
-            durations = ['4', '4', '4', '8'];
-        } else {
-            throw new Error("Not implemented yet: quarterNoteCount = " + length);
-        }
+        let durations = this.splitAtDivisionPoints(start, end, divisionPoints);
+        console.log("split", durations);
 
         if (rest) {
             durations = durations.map(d => d + "r");

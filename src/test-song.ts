@@ -12,9 +12,12 @@ export const b = [
 ];
 
 export const c = [
+];
+
+export const d = [
     new NoteEvent(
-        new QuantizeTimeResult(2, 4, 0),
-        new QuantizeTimeResult(2, 4, 0),
+        new QuantizeTimeResult(3, 4, 0),
+        new QuantizeTimeResult(3, 4, 0),
         2
     ),
 ];
