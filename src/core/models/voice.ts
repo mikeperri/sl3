@@ -1,9 +1,9 @@
-import { Clef, Note } from "./";
+import { Clef, FractionalNote } from "./";
 
 export class Voice {
     constructor(
         public clef: Clef,
-        public completed: Note[] = [],
-        public pending: Note[] = [],
+        public completed: FractionalNote[] = [],
+        public pending: FractionalNote[] = [],
     ) { }
 }

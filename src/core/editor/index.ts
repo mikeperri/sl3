@@ -1,6 +1,6 @@
 import { Flow as VF } from "vexflow";
 import { Renderer } from "../renderer";
-import { Clef, EditorPosition, KeySignature, Measure, Note, NoteEvent, RendererMeasure, TimeSignature, Voice } from "../models";
+import { Clef, EditorPosition, KeySignature, Measure, FractionalNote, NoteEvent, RendererMeasure, TimeSignature, Voice } from "../models";
 
 export class Editor {
     private position = new EditorPosition(0, 1, 0);
@@ -11,26 +11,16 @@ export class Editor {
     private y: number = 80;
 
     constructor(hostElementId) {
-        this.renderer = new Renderer();
-        this.vfFactory = new VF.Factory({
-            renderer: {
-                selector: hostElementId,
-                width: 800,
-                height: 600
-            }
-        });
+        this.renderer = new Renderer(hostElementId);
 
         this.measures.push(
             new RendererMeasure(
                 new Measure(4, 4, [ new Voice('treble'), new Voice('bass') ]),
-                null,
                 this.x,
                 this.y,
                 true
             )
         );
-
-
     }
 
     public handleBeatNotes(completedEvents, pendingEvents) {
@@ -43,10 +33,7 @@ export class Editor {
         // Will depend on how many measures per row
         const shouldAddClef = this.position.measureIndex === 0 && this.position.beatIndex === 0;
 
-        this.renderer.drawMeasure(
-            this.vfFactory,
-            this.getCurrentRendererMeasure()
-        );
+        this.renderer.drawMeasure(this.getCurrentRendererMeasure());
         const nextPosition = this.getNextPosition();
 
         if (nextPosition.measureIndex === this.position.measureIndex) {
@@ -58,7 +45,7 @@ export class Editor {
 
     // Shouldn't this be handled by rhythm input?
     private noteEventToNote(noteEvent: NoteEvent, beatIndex) {
-        const n = new Note(
+        const n = new FractionalNote(
             noteEvent.quantizedOn.asFraction().add(beatIndex - noteEvent.beatsPending, 1),
             noteEvent.quantizedOff.asFraction().add(beatIndex, 1),
         );
@@ -72,7 +59,6 @@ export class Editor {
         const newVoices = measure.voices.map(voice => new Voice(voice.clef));
         this.measures.push(new RendererMeasure(
             new Measure(measure.beatCount, measure.beatValue, newVoices),
-            null,
             this.x + rendererMeasure.width, // width;
             this.y + 0,
             false
