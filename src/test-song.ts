@@ -1,23 +1,107 @@
 import { NoteEvent, QuantizeTimeResult } from "./core/models";
 
-export const a = [
-    new NoteEvent(
-        new QuantizeTimeResult(0, 4, 0),
-        new QuantizeTimeResult(2, 4, 0),
-        0
-    ),
+export const thirtySecondNotes = [
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(2, 4, 0),
+                0
+            ),
+        ],
+        pending: []
+    },
+    {
+        completed: [],
+        pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(3, 4, 0),
+                null,
+                0
+            ),
+        ]
+    },
+    {
+        completed: [],
+        pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(3, 4, 0),
+                null,
+                1
+            ),
+        ]
+    },
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(3, 4, 0),
+                new QuantizeTimeResult(3, 4, 0),
+                2
+            ),
+        ],
+        pending: []
+    },
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                0
+            ),
+        ],
+        pending: []
+    },
 ];
 
-export const b = [
-];
-
-export const c = [
-];
-
-export const d = [
-    new NoteEvent(
-        new QuantizeTimeResult(3, 4, 0),
-        new QuantizeTimeResult(3, 4, 0),
-        2
-    ),
+export const multiMeasureNote = [
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                0
+            ),
+        ],
+        pending: []
+    },
+    {
+        completed: [],
+        pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                null,
+                0
+            ),
+        ],
+    },
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                1
+            ),
+        ],
+        pending: [],
+    },
+    {
+        completed: [],
+        pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                null,
+                0
+            ),
+        ],
+    },
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                1
+            ),
+        ],
+        pending: [],
+    },
 ];

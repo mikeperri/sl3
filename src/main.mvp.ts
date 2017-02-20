@@ -49,10 +49,9 @@ function init() {
     // renderer.render([], [], new TimeSignature(4, 4), new KeySignature('D'))
 
     // TEST
-    editor.handleBeatNotes(testData.a, []);
-    editor.handleBeatNotes(testData.b, []);
-    editor.handleBeatNotes(testData.c, []);
-    editor.handleBeatNotes(testData.d, []);
+    testData.multiMeasureNote.forEach(({ completed, pending }) => {
+        editor.handleBeatNotes(completed, pending);
+    });
 }
 
 init();

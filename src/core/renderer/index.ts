@@ -1,6 +1,6 @@
 import { Flow as VF } from "vexflow";
 import { Clef, KeySignature, Measure, FractionalNote, RendererMeasure, TimeSignature } from "../models";
-import { FractionalNotesToStaveNotes } from "../fractional-notes-to-stave-notes";
+import { RendererHelpers } from "./helpers";
 
 export class Renderer {
     private vfFactory: VF.Factory;
@@ -17,7 +17,7 @@ export class Renderer {
 
     public drawMeasure(
         rendererMeasure: RendererMeasure,
-        //noteToTie: VF.StaveNote
+        prevRendererMeasure: RendererMeasure,
     ) {
         const { measure, x, y, startsLine } = rendererMeasure;
 
@@ -42,9 +42,52 @@ export class Renderer {
         }
 
         const allVfTies = [];
-        const clefsAndVfVoices = measure.voices.map(voice => {
-            const vfVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
-            const { vfNotes, vfTies } = FractionalNotesToStaveNotes.mapNotes(voice.clef, voice.completed)
+        const clefsAndVfVoices = measure.voices.map((voice, voiceIndex) => {
+            const vfNotesToTieForward = prevRendererMeasure ? prevRendererMeasure.voicesToTieForward[voiceIndex] : null;
+            const measureLength = 4;
+            const vfVoice = new VF.Voice({ num_beats: measureLength, beat_value: 4 });
+
+            const vfNotes: VF.StaveNote[] = [];
+            const vfTies: VF.StaveTie[] = [];
+            const vfNotesToTieBackward: VF.StaveNote[] = [];
+            let lastBeat = new VF.Fraction(0, 1);
+
+            voice.completed.forEach(note => {
+                const restVfNotes = RendererHelpers.getVfRests(voice.clef, lastBeat, note.on);
+                vfNotes.push(...restVfNotes);
+
+                const { vfNotes: noteVfNotes, vfTies } = RendererHelpers.getVfNotesForLength(voice.clef, note.on, note.off);
+                vfNotes.push(...noteVfNotes);
+                vfTies.push(...vfTies);
+
+                if (note.tieForward) {
+                    if (!rendererMeasure.voicesToTieForward[voiceIndex]) rendererMeasure.voicesToTieForward[voiceIndex] = [];
+                    rendererMeasure.voicesToTieForward[voiceIndex].push(vfNotes[vfNotes.length - 1]);
+                }
+
+                if (note.tieBackward) {
+                    vfNotesToTieBackward.push(vfNotes[0]);
+                }
+
+                lastBeat = note.off.clone();
+            });
+            const endingRests = RendererHelpers.getVfRests(voice.clef, lastBeat, new VF.Fraction(measureLength, 1));
+            vfNotes.push(...endingRests);
+
+            // Build VF ties
+            if (vfNotesToTieForward && vfNotesToTieBackward.length) {
+                const shortestLength = Math.min(vfNotesToTieForward.length, vfNotesToTieBackward.length);
+
+                for (var i = 0; i < shortestLength; i++) {
+                    allVfTies.push(new VF.StaveTie({
+                        first_note: vfNotesToTieForward[i],
+                        last_note: vfNotesToTieBackward[i],
+                        first_indices: [ 0 ],
+                        last_indices: [ 0 ],
+                    }));
+                }
+            }
+
             vfVoice.addTickables(vfNotes);
             allVfTies.push(...vfTies);
             return { clef: voice.clef, vfVoice };

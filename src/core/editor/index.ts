@@ -24,16 +24,21 @@ export class Editor {
     }
 
     public handleBeatNotes(completedEvents, pendingEvents) {
-        const completedNotes = completedEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
-        const pendingNotes = pendingEvents.map(event => this.noteEventToNote(event, this.position.beatIndex));
+        const completedNotes = completedEvents
+                                .map(event => this.noteEventToNote(event, this.position.beatIndex, true));
 
-        this.getCurrentVoice().completed.push(...completedNotes);
-        this.getCurrentVoice().pending = pendingNotes;
+        const pendingNotes = pendingEvents
+                                .map(event => this.noteEventToNote(event, this.position.beatIndex, false))
+                                .filter(note => note !== undefined);
+
+        const notes = completedNotes.concat(pendingNotes);
+
+        this.getCurrentVoice().completed.push(...notes);
 
         // Will depend on how many measures per row
         const shouldAddClef = this.position.measureIndex === 0 && this.position.beatIndex === 0;
 
-        this.renderer.drawMeasure(this.getCurrentRendererMeasure());
+        this.renderer.drawMeasure(this.getCurrentRendererMeasure(), this.getPreviousRendererMeasure());
         const nextPosition = this.getNextPosition();
 
         if (nextPosition.measureIndex === this.position.measureIndex) {
@@ -44,13 +49,17 @@ export class Editor {
     }
 
     // Shouldn't this be handled by rhythm input?
-    private noteEventToNote(noteEvent: NoteEvent, beatIndex) {
-        const n = new FractionalNote(
-            noteEvent.quantizedOn.asFraction().add(beatIndex - noteEvent.beatsPending, 1),
-            noteEvent.quantizedOff.asFraction().add(beatIndex, 1),
-        );
-        console.log("NOTE", n);
-        return n;
+    private noteEventToNote(noteEvent: NoteEvent, beatIndex: number, completed: boolean) {
+        const currentBeatCount = this.getCurrentMeasure().beatCount;
+        const tieBackward = noteEvent.beatsPending > beatIndex;
+        const tieForward = !completed && beatIndex === currentBeatCount - 1;
+
+        if (completed || tieForward) {
+            const on = tieBackward ? new VF.Fraction(0, 1) : noteEvent.quantizedOn.asFraction().add(beatIndex - noteEvent.beatsPending, 1);
+            const off = tieForward ? new VF.Fraction(currentBeatCount, 1) : noteEvent.quantizedOff.asFraction().add(beatIndex, 1);
+
+            return new FractionalNote(on, off, tieForward, tieBackward);
+        }
     }
 
     private addMeasure() {
@@ -67,6 +76,10 @@ export class Editor {
 
     private getCurrentRendererMeasure() {
         return this.measures[this.position.measureIndex];
+    }
+
+    private getPreviousRendererMeasure() {
+        return this.measures[this.position.measureIndex - 1];
     }
 
     private getCurrentMeasure() {
