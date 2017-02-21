@@ -2,8 +2,8 @@ import { Flow as VF } from "vexflow";
 import { Renderer } from "../renderer";
 import { Clef, EditorPosition, KeySignature, Measure, FractionalNote, NoteEvent, RendererMeasure, TimeSignature, Voice } from "../models";
 
-const initX = 120;
-const initY = 80;
+const initX = 10;
+const initY = 20;
 
 export class Editor {
     private position = new EditorPosition(0, 1, 0);
