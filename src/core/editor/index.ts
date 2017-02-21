@@ -2,25 +2,19 @@ import { Flow as VF } from "vexflow";
 import { Renderer } from "../renderer";
 import { Clef, EditorPosition, KeySignature, Measure, FractionalNote, NoteEvent, RendererMeasure, TimeSignature, Voice } from "../models";
 
+const initX = 120;
+const initY = 80;
+
 export class Editor {
     private position = new EditorPosition(0, 1, 0);
     private renderer: Renderer;
     private measures: RendererMeasure[] = [];
     private vfFactory: VF.Factory;
-    private x: number = 120;
-    private y: number = 80;
 
     constructor(hostElementId) {
         this.renderer = new Renderer(hostElementId);
 
-        this.measures.push(
-            new RendererMeasure(
-                new Measure(4, 4, [ new Voice('treble'), new Voice('bass') ]),
-                this.x,
-                this.y,
-                true
-            )
-        );
+        this.addMeasure();
     }
 
     public handleBeatNotes(completedEvents, pendingEvents) {
@@ -41,7 +35,7 @@ export class Editor {
         this.renderer.drawMeasure(this.getCurrentRendererMeasure(), this.getPreviousRendererMeasure());
         const nextPosition = this.getNextPosition();
 
-        if (nextPosition.measureIndex === this.position.measureIndex) {
+        if (nextPosition.measureIndex > this.position.measureIndex) {
             this.addMeasure();
         }
 
@@ -62,14 +56,28 @@ export class Editor {
         }
     }
 
+    private getDefaultMeasure() {
+        return new RendererMeasure(
+            new Measure(4, 4, [ new Voice('treble'), new Voice('bass') ]),
+            initX,
+            initY,
+            true
+        );
+    }
+
     private addMeasure() {
+        if (this.measures.length === 0) {
+            this.measures.push(this.getDefaultMeasure());
+            return;
+        }
+
         const rendererMeasure = this.getCurrentRendererMeasure();
         const measure = this.getCurrentMeasure();
         const newVoices = measure.voices.map(voice => new Voice(voice.clef));
         this.measures.push(new RendererMeasure(
             new Measure(measure.beatCount, measure.beatValue, newVoices),
-            this.x + rendererMeasure.width, // width;
-            this.y + 0,
+            rendererMeasure.x + rendererMeasure.width,
+            initY,
             false
         ));
     }

@@ -96,12 +96,57 @@ export const multiMeasureNote = [
     },
     {
         completed: [
+        ],
+        pending: [
             new NoteEvent(
                 new QuantizeTimeResult(0, 4, 0),
                 new QuantizeTimeResult(4, 4, 0),
                 1
             ),
         ],
-        pending: [],
+    },
+    {
+        completed: [
+        ],
+        pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                2
+            ),
+        ],
+    },
+    {
+        completed: [
+        ],
+        pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                3
+            ),
+        ],
+    },
+    {
+        completed: [
+        ],
+        pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                4
+            ),
+        ],
+    },
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(0, 4, 0),
+                new QuantizeTimeResult(4, 4, 0),
+                5
+            ),
+        ],
+        pending: [
+        ],
     },
 ];
