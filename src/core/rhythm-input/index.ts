@@ -81,7 +81,7 @@ export class RhythmInput {
     }
 
     private fixZeroLengthNote(note: NoteEvent) {
-        if (note.beatsPending === 0 && note.quantizedOn.division === note.quantizedOff.division) {
+        if (note.beatsPending === 0 && note.quantizedOff && note.quantizedOn.division === note.quantizedOff.division) {
             const division = note.quantizedOn.division;
             const divisionCount = note.quantizedOn.divisionCount;
             const onIsFurther = Math.abs(note.quantizedOn.error) > Math.abs(note.quantizedOff.error);

@@ -23,7 +23,7 @@ export class Editor {
 
         const pendingNotes = pendingEvents
                                 .map(event => this.noteEventToNote(event, this.position.beatIndex, false))
-                                .filter(note => note !== undefined);
+                                .filter(note => note !== undefined); // pending notes that don't end at end of measure are removed
 
         const notes = completedNotes.concat(pendingNotes);
 
