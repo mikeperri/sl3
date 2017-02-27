@@ -49,7 +49,7 @@ function init() {
     // renderer.render([], [], new TimeSignature(4, 4), new KeySignature('D'))
 
     // TEST
-    testData.multiMeasureNote.forEach(({ completed, pending }) => {
+    testData.triplet.forEach(({ completed, pending }) => {
         editor.handleBeatNotes(completed, pending);
     });
 }

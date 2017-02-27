@@ -7,4 +7,5 @@ export * from "./note-event";
 export * from "./quantize-result";
 export * from "./renderer-measure";
 export * from "./time-signature";
+export * from "./tuplet";
 export * from "./voice";

@@ -1,9 +1,24 @@
 import { Flow as VF } from "vexflow";
-import { Clef, FractionalNote } from "../models";
+import { Clef, FractionalNote, Tuplet, Tuplets } from "../models";
+
+export interface VfNoteAndTuplet {
+    vfNote: VF.StaveNote[],
+    tuplet: Tuplet;
+}
+
+interface DurationsAndTuplet {
+    durations: string[];
+    tuplet: Tuplet;
+}
 
 export class RendererHelpers {
-    public static getVfNotesForLength(clef: Clef, start: VF.Fraction, end: VF.Fraction, rest = false, keys = null): { vfNotes: VF.StaveNote[], vfTies: VF.StaveTie[] } {
+    public static getVfNotesForLength(clef: Clef, start: VF.Fraction, end: VF.Fraction, rest = false, keys = null): { vfNotesAndTuplets: VfNoteAndTuplet[], vfTies: VF.StaveTie[] } {
         const length = end.clone().subtract(start);
+
+        if (length.lessThanEquals(0, 1)) {
+            return { vfNotesAndTuplets: [], vfTies: [] };
+        }
+
         if (!keys) {
             keys = clef === "treble" ? ["b/4"] : ["d/3"];
         }
@@ -15,56 +30,54 @@ export class RendererHelpers {
 
         // Find boundaries for division
         const divisionPoints = this.getDivisionPoints(start, end);
-        let durations = this.splitAtDivisionPoints(start, end, divisionPoints);
+        let durationsAndTuplets = this.divisionPointsToDurationsAndTuplets(start, end, divisionPoints);
 
         if (rest) {
-            durations = durations.map(d => d + "r");
+            durationsAndTuplets.forEach(durationsAndTuplet => {
+                durationsAndTuplet.durations = durationsAndTuplet.durations.map(d => d + "r");
+            });
         }
 
-        const vfNotes = durations.map(duration => {
-            const vfNote = new VF.StaveNote({ clef, keys, duration });
-            if (vfNote.dots > 0) {
-                vfNote.addDotToAll();
-            }
-            return vfNote;
+        const vfNotesAndTuplets: VfNoteAndTuplet[] = [];
+        durationsAndTuplets.forEach(({ durations, tuplet }) => {
+            durations.forEach(duration => {
+                const vfNote = new VF.StaveNote({ clef, keys, duration });
+                if (vfNote.dots > 0) {
+                    vfNote.addDotToAll();
+                }
+                vfNotesAndTuplets.push({ vfNote, tuplet });
+            });
         });
 
+        // Add ties
         const vfTies: VF.StaveTie[] = [];
-        if (vfNotes.length > 1 && !rest) {
-            // Add ties
-            for (var i = 1; i < vfNotes.length; i++) {
+        if (!rest) {
+            for (var i = 1; i < vfNotesAndTuplets.length; i++) {
                 vfTies.push(new VF.StaveTie({
-                    first_note: vfNotes[i - 1],
-                    last_note: vfNotes[i],
+                    first_note: vfNotesAndTuplets[i - 1].vfNote,
+                    last_note: vfNotesAndTuplets[i].vfNote,
                     first_indices: [ 0 ],
                     last_indices: [ 0 ],
                 }));
             }
         }
 
-        return { vfNotes, vfTies };
+        return { vfNotesAndTuplets, vfTies };
     }
 
-    public static getVfRests(clef: Clef, start: VF.Fraction, end: VF.Fraction) {
-        const restLength = end.clone().subtract(start);
-
-        if (restLength.greaterThan(0, 1)) {
-            return this.getVfNotesForLength(clef, start, end, true).vfNotes;
-        } else {
-            return [];
-        }
-    }
-
+    // start and end must be simplified
     private static getDivisionPoints(start: VF.Fraction, end: VF.Fraction) {
         let points: VF.Fraction[] = [];
-        if (start.denominator >= 4 && start.denominator > end.denominator) {
-            const point = new VF.Fraction(Math.ceil(start.numerator / 4), start.denominator / 4)
+        if (start.denominator >= 3 && start.denominator > end.denominator) {
+            const factor = this.getDivisionFactor(start.denominator);
+            const point = new VF.Fraction(Math.ceil(start.numerator / factor), start.denominator / factor)
             while(point.lessThan(end)) {
                 points.push(point.clone());
                 point.add(1, point.denominator);
             }
-        } else if (end.denominator >= 4) {
-            const point = new VF.Fraction(Math.floor(end.numerator / 4), end.denominator / 4);
+        } else if (end.denominator >= 3) {
+            const factor = this.getDivisionFactor(end.denominator);
+            const point = new VF.Fraction(Math.floor(end.numerator / factor), end.denominator / factor);
             while(point.greaterThan(start)) {
                 points.push(point.clone());
                 point.subtract(1, point.denominator);
@@ -74,7 +87,14 @@ export class RendererHelpers {
         return points;
     }
 
-    private static splitAtDivisionPoints(start: VF.Fraction, end: VF.Fraction, divisionPoints: VF.Fraction[]): string[] {
+    private static getDivisionFactor(n: number): number {
+        while (n % 2 === 0) {
+            n /= 2;
+        }
+        return n === 1 ? 4 : n;
+    }
+
+    private static divisionPointsToDurationsAndTuplets(start: VF.Fraction, end: VF.Fraction, divisionPoints: VF.Fraction[]): DurationsAndTuplet[] {
         let pointsInRange: VF.Fraction[] = [ start ];
         divisionPoints.forEach(divisionPoint => {
             if (divisionPoint.greaterThan(start) && divisionPoint.lessThan(end)) {
@@ -83,38 +103,41 @@ export class RendererHelpers {
         });
         pointsInRange.push(end);
 
-        let durations = [];
+        let durationsAndTuplets = [];
         for (var i = 1; i < pointsInRange.length; i++) {
             const length = pointsInRange[i].clone().subtract(pointsInRange[i - 1]);
-            durations.push(...this.lengthToVfDurations(length));
+            durationsAndTuplets.push(this.lengthToVfDurationsAndTuplet(length));
         }
-        return durations;
+
+        return durationsAndTuplets;
     }
 
 
-    private static lengthToVfDurations(length: VF.Fraction): string[] {
+    private static lengthToVfDurationsAndTuplet(length: VF.Fraction): DurationsAndTuplet {
         if (length.equals(new VF.Fraction(1, 4))) {
-            return ['16'];
+            return { durations: ['16'], tuplet: null };
         } else if (length.equals(new VF.Fraction(1, 2))) {
-            return ['8'];
+            return { durations: ['8'], tuplet: null };
         } else if (length.equals(new VF.Fraction(3, 4))) {
-            return ['8d'];
+            return { durations: ['8d'], tuplet: null };
         } else if (length.equals(new VF.Fraction(1, 1))) {
-            return ['4'];
+            return { durations: ['4'], tuplet: null };
         } else if (length.equals(new VF.Fraction(2, 1))) {
-            return ['2'];
+            return { durations: ['2'], tuplet: null };
         } else if (length.equals(new VF.Fraction(3, 1))) {
-            return ['2d'];
+            return { durations: ['2d'], tuplet: null };
         } else if (length.equals(new VF.Fraction(4, 1))) {
-            return ['1'];
+            return { durations: ['1'], tuplet: null };
         } else if (length.equals(new VF.Fraction(5, 4))) {
-            return ['4', '16'];
+            return { durations: ['4', '16'], tuplet: null };
         } else if (length.equals(new VF.Fraction(3, 2))) {
-            return ['4d'];
+            return { durations: ['4d'], tuplet: null };
         } else if (length.equals(new VF.Fraction(5, 2))) {
-            return ['4', '4', '8'];
+            return { durations: ['4', '4', '8'], tuplet: null };
         } else if (length.equals(new VF.Fraction(7, 2))) {
-            return ['4', '4', '4', '8'];
+            return { durations: ['4', '4', '4', '8'], tuplet: null };
+        } else if (length.equals(new VF.Fraction(1, 3))) {
+            return { durations: ['8'], tuplet: Tuplets.Triplet };
         } else {
             throw new Error("Not implemented yet: quarterNoteCount = " + length);
         }

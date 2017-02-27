@@ -1,6 +1,6 @@
 import { Flow as VF } from "vexflow";
-import { Clef, KeySignature, Measure, FractionalNote, RendererMeasure, TimeSignature } from "../models";
-import { RendererHelpers } from "./helpers";
+import { Clef, KeySignature, Measure, FractionalNote, RendererMeasure, TimeSignature, Tuplet } from "../models";
+import { RendererHelpers, VfNoteAndTuplet } from "./helpers";
 
 export class Renderer {
     private vfFactory: VF.Factory;
@@ -42,22 +42,27 @@ export class Renderer {
         }
 
         const allVfTies = [];
+        const allVfTuplets: VF.Tuplet[] = [];
         const clefsAndVfVoices = measure.voices.map((voice, voiceIndex) => {
             const vfNotesToTieForward = prevRendererMeasure ? prevRendererMeasure.voicesToTieForward[voiceIndex] : null;
             const measureLength = 4;
-            const vfVoice = new VF.Voice({ num_beats: measureLength, beat_value: 4 });
+            const vfVoice = new VF.Voice({ num_beats: measureLength, beat_value: 4 }).setMode(VF.Voice.Mode.SOFT);
 
             const vfNotes: VF.StaveNote[] = [];
             const vfTies: VF.StaveTie[] = [];
             const vfNotesToTieBackward: VF.StaveNote[] = [];
+            const vfNotesForCurrentTuplet: VF.StaveNote[] = [];
             let lastBeat = new VF.Fraction(0, 1);
+            let currentTuplet = null;
 
             voice.completed.forEach(note => {
-                const restVfNotes = RendererHelpers.getVfRests(voice.clef, lastBeat, note.on);
-                vfNotes.push(...restVfNotes);
+                const restVfNotesAndTuplets = RendererHelpers.getVfNotesForLength(voice.clef, lastBeat, note.on, true).vfNotesAndTuplets;
+                currentTuplet = this.handleVfNotesAndTuplets(restVfNotesAndTuplets, vfNotes, allVfTuplets, vfNotesForCurrentTuplet, currentTuplet);
+                // vfNotes.push(...restVfNotes);
 
-                const { vfNotes: noteVfNotes, vfTies } = RendererHelpers.getVfNotesForLength(voice.clef, note.on, note.off);
-                vfNotes.push(...noteVfNotes);
+                const { vfNotesAndTuplets: noteVfNotesAndTuplets, vfTies } = RendererHelpers.getVfNotesForLength(voice.clef, note.on, note.off);
+                currentTuplet = this.handleVfNotesAndTuplets(noteVfNotesAndTuplets, vfNotes, allVfTuplets, vfNotesForCurrentTuplet, currentTuplet);
+                // vfNotes.push(...noteVfNotes);
                 vfTies.push(...vfTies);
 
                 if (note.tieForward) {
@@ -71,8 +76,10 @@ export class Renderer {
 
                 lastBeat = note.off.clone();
             });
-            const endingRests = RendererHelpers.getVfRests(voice.clef, lastBeat, new VF.Fraction(measureLength, 1));
-            vfNotes.push(...endingRests);
+            const endOfMeasure = new VF.Fraction(measureLength, 1);
+            const endingRestVfNotesAndTuplets = RendererHelpers.getVfNotesForLength(voice.clef, lastBeat, endOfMeasure, true).vfNotesAndTuplets;
+            currentTuplet = this.handleVfNotesAndTuplets(endingRestVfNotesAndTuplets, vfNotes, allVfTuplets, vfNotesForCurrentTuplet, currentTuplet, true);
+            // vfNotes.push(...endingRestVfNotes);
 
             // Build VF ties
             if (vfNotesToTieForward && vfNotesToTieBackward.length) {
@@ -116,10 +123,44 @@ export class Renderer {
         vfStaves.forEach(vfStave => vfStave.draw());
         clefs.forEach(clef => clefToVfVoices[clef].forEach(vfVoice => vfVoice.draw()));
         allVfTies.forEach(vfTie => vfTie.setContext(system.getContext()).draw());
+        console.log("all vf tuplets", allVfTuplets);
+        allVfTuplets.forEach(vfTuplet => vfTuplet.setContext(system.getContext()).draw());
         system.getContext().closeGroup('measure');
 
         rendererMeasure.element = element;
         rendererMeasure.width = width;
     }
 
+    private handleVfNotesAndTuplets(vfNotesAndTuplets: VfNoteAndTuplet[], vfNotes: VF.StaveNote[], vfTuplets: VF.Tuplet[], vfNotesForCurrentTuplet: VF.StaveNote[], currentTuplet: Tuplet, flushAtEnd: boolean = false) {
+        let nextCurrentTuplet = currentTuplet;
+
+        function flush() {
+            if (nextCurrentTuplet !== null && vfNotesForCurrentTuplet.length) {
+                console.log("that happened", vfNotesForCurrentTuplet);
+                vfTuplets.push(new VF.Tuplet(vfNotesForCurrentTuplet.slice(), {
+                    num_notes: nextCurrentTuplet.num_notes, 
+                    notes_occupied: nextCurrentTuplet.notes_occupied
+                }));
+            }
+
+            vfNotesForCurrentTuplet.splice(0, vfNotesForCurrentTuplet.length);
+        }
+
+        vfNotesAndTuplets.forEach(({ vfNote, tuplet }) => {
+            if (!Tuplet.equal(tuplet, nextCurrentTuplet)) {
+                flush();
+                nextCurrentTuplet = tuplet;
+            }
+
+            if (nextCurrentTuplet !== null) {
+                vfNotesForCurrentTuplet.push(vfNote);
+            }
+
+            vfNotes.push(vfNote);
+        });
+
+        if (flushAtEnd) flush();
+
+        return nextCurrentTuplet;
+    }
 }

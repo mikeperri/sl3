@@ -1,5 +1,28 @@
 import { NoteEvent, QuantizeTimeResult } from "./core/models";
 
+export const triplet = [
+    {
+        completed: [],
+        pending: [],
+    },
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(1, 3, 0),
+                new QuantizeTimeResult(2, 3, 0),
+                0,
+            ),
+            new NoteEvent(
+                new QuantizeTimeResult(2, 3, 0),
+                new QuantizeTimeResult(3, 3, 0),
+                0,
+            ),
+        ],
+        pending: [
+        ]
+    },
+];
+
 export const thirtySecondNotes = [
     {
         completed: [
