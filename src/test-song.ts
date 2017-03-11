@@ -8,19 +8,38 @@ export const triplet = [
     {
         completed: [
             new NoteEvent(
-                new QuantizeTimeResult(1, 3, 0),
+                new QuantizeTimeResult(0, 3, 0),
                 new QuantizeTimeResult(2, 3, 0),
-                0,
-            ),
-            new NoteEvent(
-                new QuantizeTimeResult(2, 3, 0),
-                new QuantizeTimeResult(3, 3, 0),
                 0,
             ),
         ],
         pending: [
+            new NoteEvent(
+                new QuantizeTimeResult(2, 3, 0),
+                null,
+                0,
+            ),
         ]
     },
+    {
+        completed: [
+            new NoteEvent(
+                new QuantizeTimeResult(2, 3, 0),
+                new QuantizeTimeResult(1, 3, 0),
+                1,
+            ),
+            new NoteEvent(
+                new QuantizeTimeResult(1, 3, 0),
+                new QuantizeTimeResult(3, 3, 0),
+                0,
+            ),
+        ],
+        pending: []
+    },
+    {
+        completed: [],
+        pending: []
+    }
 ];
 
 export const thirtySecondNotes = [

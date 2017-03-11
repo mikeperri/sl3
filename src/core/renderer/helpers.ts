@@ -68,7 +68,9 @@ export class RendererHelpers {
     // start and end must be simplified
     private static getDivisionPoints(start: VF.Fraction, end: VF.Fraction) {
         let points: VF.Fraction[] = [];
-        if (start.denominator >= 3 && start.denominator > end.denominator) {
+        if (this.fractionToTuplet(end)) {
+            // don't make any divisions within a tuplet!
+        } else if (start.denominator >= 3 && start.denominator > end.denominator) {
             const factor = this.getDivisionFactor(start.denominator);
             const point = new VF.Fraction(Math.ceil(start.numerator / factor), start.denominator / factor)
             while(point.lessThan(end)) {
@@ -112,32 +114,43 @@ export class RendererHelpers {
         return durationsAndTuplets;
     }
 
+    private static fractionToTuplet(f: VF.Fraction) {
+        if (f.denominator % 3 === 0) {
+            return Tuplets.Triplet;
+        } else {
+            return null;
+        }
+    }
 
     private static lengthToVfDurationsAndTuplet(length: VF.Fraction): DurationsAndTuplet {
+        const tuplet = this.fractionToTuplet(length);
+
         if (length.equals(new VF.Fraction(1, 4))) {
-            return { durations: ['16'], tuplet: null };
+            return { durations: ['16'], tuplet };
         } else if (length.equals(new VF.Fraction(1, 2))) {
-            return { durations: ['8'], tuplet: null };
+            return { durations: ['8'], tuplet };
         } else if (length.equals(new VF.Fraction(3, 4))) {
-            return { durations: ['8d'], tuplet: null };
+            return { durations: ['8d'], tuplet };
         } else if (length.equals(new VF.Fraction(1, 1))) {
-            return { durations: ['4'], tuplet: null };
+            return { durations: ['4'], tuplet };
         } else if (length.equals(new VF.Fraction(2, 1))) {
-            return { durations: ['2'], tuplet: null };
+            return { durations: ['2'], tuplet };
         } else if (length.equals(new VF.Fraction(3, 1))) {
-            return { durations: ['2d'], tuplet: null };
+            return { durations: ['2d'], tuplet };
         } else if (length.equals(new VF.Fraction(4, 1))) {
-            return { durations: ['1'], tuplet: null };
+            return { durations: ['1'], tuplet };
         } else if (length.equals(new VF.Fraction(5, 4))) {
-            return { durations: ['4', '16'], tuplet: null };
+            return { durations: ['4', '16'], tuplet };
         } else if (length.equals(new VF.Fraction(3, 2))) {
-            return { durations: ['4d'], tuplet: null };
+            return { durations: ['4d'], tuplet };
         } else if (length.equals(new VF.Fraction(5, 2))) {
-            return { durations: ['4', '4', '8'], tuplet: null };
+            return { durations: ['4', '4', '8'], tuplet };
         } else if (length.equals(new VF.Fraction(7, 2))) {
-            return { durations: ['4', '4', '4', '8'], tuplet: null };
+            return { durations: ['4', '4', '4', '8'], tuplet };
         } else if (length.equals(new VF.Fraction(1, 3))) {
-            return { durations: ['8'], tuplet: Tuplets.Triplet };
+            return { durations: ['8'], tuplet };
+        } else if (length.equals(new VF.Fraction(2, 3))) {
+            return { durations: ['4'], tuplet };
         } else {
             throw new Error("Not implemented yet: quarterNoteCount = " + length);
         }

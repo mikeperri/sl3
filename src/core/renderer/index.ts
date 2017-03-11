@@ -147,7 +147,7 @@ export class Renderer {
         }
 
         vfNotesAndTuplets.forEach(({ vfNote, tuplet }) => {
-            if (!Tuplet.equal(tuplet, nextCurrentTuplet)) {
+            if (!Tuplet.equal(tuplet, nextCurrentTuplet) && (tuplet && vfNotesForCurrentTuplet.length === tuplet.num_notes)) {
                 flush();
                 nextCurrentTuplet = tuplet;
             }
