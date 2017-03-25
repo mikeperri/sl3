@@ -58,11 +58,9 @@ export class Renderer {
             voice.completed.forEach(note => {
                 const restVfNotesAndTuplets = RendererHelpers.getVfNotesForLength(voice.clef, lastBeat, note.on, true).vfNotesAndTuplets;
                 currentTuplet = this.handleVfNotesAndTuplets(restVfNotesAndTuplets, vfNotes, allVfTuplets, vfNotesForCurrentTuplet, currentTuplet);
-                // vfNotes.push(...restVfNotes);
 
                 const { vfNotesAndTuplets: noteVfNotesAndTuplets, vfTies } = RendererHelpers.getVfNotesForLength(voice.clef, note.on, note.off);
                 currentTuplet = this.handleVfNotesAndTuplets(noteVfNotesAndTuplets, vfNotes, allVfTuplets, vfNotesForCurrentTuplet, currentTuplet);
-                // vfNotes.push(...noteVfNotes);
                 vfTies.push(...vfTies);
 
                 if (note.tieForward) {
@@ -78,8 +76,7 @@ export class Renderer {
             });
             const endOfMeasure = new VF.Fraction(measureLength, 1);
             const endingRestVfNotesAndTuplets = RendererHelpers.getVfNotesForLength(voice.clef, lastBeat, endOfMeasure, true).vfNotesAndTuplets;
-            currentTuplet = this.handleVfNotesAndTuplets(endingRestVfNotesAndTuplets, vfNotes, allVfTuplets, vfNotesForCurrentTuplet, currentTuplet, true);
-            // vfNotes.push(...endingRestVfNotes);
+            this.handleVfNotesAndTuplets(endingRestVfNotesAndTuplets, vfNotes, allVfTuplets, vfNotesForCurrentTuplet, currentTuplet, true);
 
             // Build VF ties
             if (vfNotesToTieForward && vfNotesToTieBackward.length) {
@@ -123,7 +120,6 @@ export class Renderer {
         vfStaves.forEach(vfStave => vfStave.draw());
         clefs.forEach(clef => clefToVfVoices[clef].forEach(vfVoice => vfVoice.draw()));
         allVfTies.forEach(vfTie => vfTie.setContext(system.getContext()).draw());
-        console.log("all vf tuplets", allVfTuplets);
         allVfTuplets.forEach(vfTuplet => vfTuplet.setContext(system.getContext()).draw());
         system.getContext().closeGroup('measure');
 
@@ -136,7 +132,6 @@ export class Renderer {
 
         function flush() {
             if (nextCurrentTuplet !== null && vfNotesForCurrentTuplet.length) {
-                console.log("that happened", vfNotesForCurrentTuplet);
                 vfTuplets.push(new VF.Tuplet(vfNotesForCurrentTuplet.slice(), {
                     num_notes: nextCurrentTuplet.num_notes, 
                     notes_occupied: nextCurrentTuplet.notes_occupied
@@ -147,14 +142,15 @@ export class Renderer {
         }
 
         vfNotesAndTuplets.forEach(({ vfNote, tuplet }) => {
-            if (!Tuplet.equal(tuplet, nextCurrentTuplet) && (tuplet && vfNotesForCurrentTuplet.length === tuplet.num_notes)) {
+            if (!Tuplet.equal(tuplet, nextCurrentTuplet) && nextCurrentTuplet && vfNotesForCurrentTuplet.length === nextCurrentTuplet.num_notes) {
                 flush();
-                nextCurrentTuplet = tuplet;
             }
 
-            if (nextCurrentTuplet !== null) {
+            if (tuplet !== null) {
                 vfNotesForCurrentTuplet.push(vfNote);
             }
+
+            nextCurrentTuplet = tuplet;
 
             vfNotes.push(vfNote);
         });
