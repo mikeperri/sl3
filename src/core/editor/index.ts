@@ -17,16 +17,7 @@ export class Editor {
         this.addMeasure();
     }
 
-    public handleBeatNotes(completedEvents, pendingEvents) {
-        const completedNotes = completedEvents
-                                .map(event => this.noteEventToNote(event, this.position.beatIndex, true));
-
-        const pendingNotes = pendingEvents
-                                .map(event => this.noteEventToNote(event, this.position.beatIndex, false))
-                                .filter(note => note !== undefined); // pending notes that don't end at end of measure are removed
-
-        const notes = completedNotes.concat(pendingNotes);
-
+    public renderFractionalNotes(notes: FractionalNote[]) {
         this.getCurrentVoice().completed.push(...notes);
 
         // Will depend on how many measures per row
@@ -40,6 +31,19 @@ export class Editor {
         }
 
         this.position = nextPosition;
+    }
+
+    public handleBeatNotes(completedEvents: NoteEvent[], pendingEvents: NoteEvent[]) {
+        const completedNotes = completedEvents
+                                .map(event => this.noteEventToNote(event, this.position.beatIndex, true));
+
+        const pendingNotes = pendingEvents
+                                .map(event => this.noteEventToNote(event, this.position.beatIndex, false))
+                                .filter(note => note !== undefined); // pending notes that don't end at end of measure are removed
+
+        const notes = completedNotes.concat(pendingNotes);
+
+        this.renderFractionalNotes(notes);
     }
 
     // Shouldn't this be handled by rhythm input?

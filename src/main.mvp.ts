@@ -4,7 +4,8 @@ import { RhythmInput } from "./core/rhythm-input";
 import { TimeSignature, KeySignature } from "./core/models";
 
 // TESTING
-import * as testData from "./test-song";
+import * as testInput from "./test-input";
+import * as testSongs from "./test-songs";
 
 const editor = new Editor("renderer-host");
 const divisionCounts = [4, 3];
@@ -46,12 +47,8 @@ function handleNotesReady(completed, pending) {
 }
 
 function init() {
-    // renderer.render([], [], new TimeSignature(4, 4), new KeySignature('D'))
-
     // TEST
-    testData.triplet.forEach(({ completed, pending }) => {
-        editor.handleBeatNotes(completed, pending);
-    });
+    editor.renderFractionalNotes(testSongs.eighthNoteTriplet);
 }
 
 init();
