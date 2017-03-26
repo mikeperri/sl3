@@ -80,6 +80,7 @@ export class RhythmInput {
         }
     }
 
+    // Always gives the note event a non-zero length. Maybe if it's short enough just ignore it?
     private fixZeroLengthNote(note: NoteEvent) {
         if (note.beatsPending === 0 && note.quantizedOff && note.quantizedOn.division === note.quantizedOff.division) {
             const division = note.quantizedOn.division;
@@ -118,7 +119,7 @@ export class RhythmInput {
         let bestTotalError: number;
         resultsByDivisionCount.forEach(({ divisionCount, results, totalError }) => {
             if (divisionCount % 2 !== 0) {
-                totalError *= 2;
+                totalError *= 1.5;
             }
 
             if (bestResults === null || totalError < bestTotalError) {
