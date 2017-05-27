@@ -17,23 +17,36 @@ export class Editor {
         this.addMeasure();
     }
 
-    public renderFractionalNotes(notes: FractionalNote[]) {
-        this.getCurrentVoice().completed.push(...notes);
-
-        // Will depend on how many measures per row
-        const shouldAddClef = this.position.measureIndex === 0 && this.position.beatIndex === 0;
-
-        this.renderer.drawMeasure(this.getCurrentRendererMeasure(), this.getPreviousRendererMeasure());
-        const nextPosition = this.getNextPosition();
-
-        if (nextPosition.measureIndex > this.position.measureIndex) {
+    public renderMeasures(measures: Measure[]) {
+        if (this.position.beatIndex !== 0) {
             this.addMeasure();
+            this.position.measureIndex++;
+            this.position.beatIndex = 0;
         }
 
-        this.position = nextPosition;
+        measures.forEach((measure, measureIndex) => {
+            if (!this.measures[measureIndex]) {
+                this.addMeasure();
+            }
+            this.position.measureIndex = measureIndex;
+
+            measure.voices.forEach(voice => {
+                const voiceIndex = this.getCurrentMeasure().voices
+                                                .findIndex(rendererVoice => rendererVoice.clef === voice.clef);
+                if (voiceIndex !== -1) {
+                    this.position.voiceIndex = voiceIndex;
+                    this.renderNotes(voice.completed);
+                }
+            });
+        });
+
+        this.addMeasure();
+        this.position.measureIndex++;
+        this.renderNotes([]);
     }
 
     public handleBeatNotes(completedEvents: NoteEvent[], pendingEvents: NoteEvent[]) {
+        console.log('handling beat notes @ position', this.position.measureIndex, this.position.beatIndex);
         const completedNotes = completedEvents
                                 .map(event => this.noteEventToNote(event, this.position.beatIndex, true));
 
@@ -43,7 +56,22 @@ export class Editor {
 
         const notes = completedNotes.concat(pendingNotes);
 
-        this.renderFractionalNotes(notes);
+        this.renderNotes(notes);
+
+        const nextPosition = this.getNextPosition();
+
+        if (nextPosition.measureIndex > this.position.measureIndex) {
+            this.addMeasure();
+        }
+
+        this.position = nextPosition;
+    }
+
+    private renderNotes(completedNotes: FractionalNote[], pendingNotes?: FractionalNote[]) {
+        this.getCurrentVoice().completed.push(...completedNotes);
+        this.getCurrentVoice().pending.push(...pendingNotes);
+
+        this.renderer.drawMeasure(this.getCurrentRendererMeasure(), this.getPreviousRendererMeasure());
     }
 
     // Shouldn't this be handled by rhythm input?

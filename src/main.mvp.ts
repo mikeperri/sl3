@@ -48,7 +48,7 @@ function handleNotesReady(completed, pending) {
 
 function init() {
     // TEST
-    editor.renderFractionalNotes(testSongs.eighthNoteTriplet);
+    editor.renderMeasures(testSongs.eighthNoteTriplet);
 }
 
 init();
