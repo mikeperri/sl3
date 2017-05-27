@@ -24,6 +24,7 @@ export class KeyboardRhythmInputHandle {
         if (this.keysDown.indexOf(code) !== -1) {
             return;
         }
+        e.preventDefault();
 
         this.keysDown.push(code);
 
