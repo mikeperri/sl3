@@ -9,6 +9,8 @@ export class KeyboardRhythmInputHandle {
         private handleBeat: () => void,
         private handleNoteOn: (number) => void,
         private handleNoteOff: (number) => void,
+        private start: () => void,
+        private stop: () => void,
     ) {
         this.subscribe();
     }
@@ -32,6 +34,10 @@ export class KeyboardRhythmInputHandle {
             this.handleBeat();
         } else if (code >= 65 && code <= 90) {
             this.handleNoteOn(code);
+        } else if (code === 13) {
+            this.start();
+        } else if (code === 27) {
+            this.stop();
         }
     }
 
