@@ -8,6 +8,7 @@ type RhythmInputEventType = 'BEAT' | 'TAP' | 'QUANTIZED_COMPLETED' | 'QUANTIZED_
 
 interface RhythmInputEvent {
     type: RhythmInputEventType;
+    element?: HTMLElement;
     onTime?: number;
     offTime?: number;
     onDecimal?: number;
@@ -51,16 +52,12 @@ export class RhythmInputDisplay {
     private started = false;
 
     private activeEvents: { [key: number]: RhythmInputEvent } = {};
-    private context: CanvasRenderingContext2D;
+    private hostElement: HTMLElement;
 
     constructor(
         hostElementId: string,
     ) {
-        const hostElement = document.getElementById(hostElementId);
-        const canvas = document.createElement('canvas');
-
-        hostElement.appendChild(canvas);
-        this.context = canvas.getContext('2d');
+        this.hostElement = document.getElementById(hostElementId);
 
         this.start();
     }
@@ -69,6 +66,7 @@ export class RhythmInputDisplay {
         this.beatEvents.push({
             type: 'BEAT',
             onTime: time,
+            element: this.createBeatElement(),
         });
     }
 
@@ -77,6 +75,7 @@ export class RhythmInputDisplay {
             type: 'TAP',
             onTime: time,
             id,
+            element: this.createNoteElement(),
         };
         this.tapEvents.push(e);
         this.activeEvents[id] = e;
@@ -119,49 +118,57 @@ export class RhythmInputDisplay {
         this.started = false;
     }
 
+    private createBeatElement() {
+        const el = document.createElement('div');
+        el.className = 'beat';
+        return el;
+    }
+
+    private createNoteElement() {
+        const el = document.createElement('div');
+        el.className = 'note';
+        return el;
+    }
+
     private draw() {
         const time = Date.now();
         const beatEvents = this.beatEvents.concat([ { type: 'BEAT', onTime: time } ]);
 
-        this.context.clearRect(0, 0, canvasWidth, canvasHeight);
-        this.drawMarker('BEAT', 0, 0);
+        const beatIndex = Math.max(beatEvents.length - 1, 0);
 
-        for (var beatIndex = 1; beatIndex < beatEvents.length; beatIndex++) {
-            const startBeatTime = beatEvents[beatIndex - 1].onTime;
-            const endBeatTime = beatEvents[beatIndex].onTime;
-            const beatLength = endBeatTime - startBeatTime;
+        const startBeatTime = beatEvents[beatIndex - 1].onTime;
+        const endBeatTime = beatEvents[beatIndex].onTime;
+        const beatLength = endBeatTime - startBeatTime;
 
-            this.context.fillRect(beatWidth * beatIndex, 0, 2, canvasHeight);
-            this.drawMarker('BEAT', beatIndex, 0);
-            console.log('now drawing marker at', beatIndex);
+        this.context.fillRect(beatWidth * beatIndex, 0, 2, canvasHeight);
+        this.drawMarker('BEAT', beatIndex, 0);
 
-            this.tapEvents.forEach(e => {
-                if (e.onTime >= startBeatTime && e.onTime < endBeatTime) {
-                    e.onDecimal = (e.onTime - startBeatTime) / beatLength;
+        this.tapEvents.forEach(e => {
+            if (e.onTime >= startBeatTime && e.onTime < endBeatTime) {
+                e.onDecimal = (e.onTime - startBeatTime) / beatLength;
 
-                    if (e.offTime === undefined || e.offTime >= endBeatTime) {
-                        e.offDecimal = 1;
-                    } else {
-                        e.offDecimal = (e.offTime - startBeatTime) / beatLength;
-                    }
-
-                    this.drawMarker('TAP', beatIndex - 1, e.onDecimal, e.offDecimal);
-                } else if (e.onTime < startBeatTime && (e.offTime >= endBeatTime || e.offTime === undefined)) {
-                    this.drawMarker('TAP', beatIndex - 1, 0, 1);
-                } else if (e.offTime >= startBeatTime && e.offTime <= endBeatTime) {
+                if (e.offTime === undefined || e.offTime >= endBeatTime) {
+                    e.offDecimal = 1;
+                } else {
                     e.offDecimal = (e.offTime - startBeatTime) / beatLength;
-
-                    this.drawMarker('TAP', beatIndex - 1, 0, e.offDecimal);
                 }
-            });
 
-            const offTaps = this.tapEvents.filter(e => {
-                return e.offTime >= startBeatTime && e.offTime <= endBeatTime;
-            });
-            offTaps.forEach(e => {
-                e.offDecimal = e.offTime / beatLength;
-            });
-        }
+                this.drawMarker('TAP', beatIndex - 1, e.onDecimal, e.offDecimal);
+            } else if (e.onTime < startBeatTime && (e.offTime >= endBeatTime || e.offTime === undefined)) {
+                this.drawMarker('TAP', beatIndex - 1, 0, 1);
+            } else if (e.offTime >= startBeatTime && e.offTime <= endBeatTime) {
+                e.offDecimal = (e.offTime - startBeatTime) / beatLength;
+
+                this.drawMarker('TAP', beatIndex - 1, 0, e.offDecimal);
+            }
+        });
+
+        const offTaps = this.tapEvents.filter(e => {
+            return e.offTime >= startBeatTime && e.offTime <= endBeatTime;
+        });
+        offTaps.forEach(e => {
+            e.offDecimal = e.offTime / beatLength;
+        });
     }
 
     private drawMarker(type: RhythmInputEventType, beatIndex: number, onDecimal: number, offDecimal?: number) {
